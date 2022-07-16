@@ -1,0 +1,24 @@
+{
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "editor.formatOnSave": true,
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.lintOnSave": true,
+  "python.linting.flake8Args": [
+    "--config=.flake8",
+    "--max-line-length=120",
+    "--ignore=E203,W503"
+  ],
+  "python.formatting.provider": "black",
+  "python.sortImports.args": ["--atomic"],
+  "[python]": {
+    "editor.tabSize": 4,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": true
+    }
+  },
+  "auto-close-tag.activationOnLanguage": ["*"],
+  "emmet.includeLanguages": { "django-html": "html" }
+}
