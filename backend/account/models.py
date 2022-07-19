@@ -1,6 +1,13 @@
-from django.contrib.auth.models import AbstractUser
+from __future__ import annotations
+
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.validators import MinLengthValidator
 from django.db import models
+
+
+class UserManager(UserManager):
+    def create(self, *args, **kwargs) -> User:
+        return self.create_user(*args, **kwargs)
 
 
 class User(AbstractUser):
@@ -25,3 +32,5 @@ class User(AbstractUser):
     visibility = models.CharField(
         max_length=7, choices=VISIBILITY_CHOICES, default=PUBLIC_OPTION[0]
     )
+
+    objects = UserManager()
