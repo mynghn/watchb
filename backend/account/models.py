@@ -4,6 +4,9 @@ from django.db import models
 
 
 class User(AbstractUser):
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]  # only for createsuperuser command
+
     username = models.CharField(
         max_length=150,
         help_text="Required. 2 to 150 characters. Letters, digits and @/./+/-/_ only.",
@@ -22,6 +25,3 @@ class User(AbstractUser):
     visibility = models.CharField(
         max_length=7, choices=VISIBILITY_CHOICES, default=PUBLIC_OPTION[0]
     )
-
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
