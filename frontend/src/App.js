@@ -4,21 +4,21 @@ import Home from "./pages/Home";
 import Profile from "./pages/account/Profile";
 import BottomBar from "./components/BottomBar";
 
+const NAV_BAR_HEIGHT = "62px";
+const BOTTOM_BAR_HEIGHT = "62px";
+const BOTTOM_BAR_FONTSIZE = "19px";
+
 function App() {
   return (
     <div className="App">
-      <div className="NavBar">
-        <NavBar />
-      </div>
-      <div className="Body">
+      <NavBar height={NAV_BAR_HEIGHT} />
+      <div className="Body bg-light">
         <Routes>
           <Route path="" element={<Home />}></Route>
           <Route path="users/:userId" element={<Profile />}></Route>
         </Routes>
       </div>
-      <div className="BottomBar">
-        <BottomBar />
-      </div>
+      <BottomBar height={BOTTOM_BAR_HEIGHT} fontsize={BOTTOM_BAR_FONTSIZE} />
     </div>
   );
 }
