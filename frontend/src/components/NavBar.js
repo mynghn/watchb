@@ -1,18 +1,12 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "react-bootstrap/Navbar";
 import Container from "react-bootstrap/Container";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 
-function BrandLogo({ imgSrc, imgWidth, imgHeight }) {
-  return (
-    <Link to="">
-      <img src={imgSrc} width={imgWidth} height={imgHeight} alt="WatchB logo" />
-    </Link>
-  );
-}
-const LOGO_IMAGE_WIDTH = "151px";
-const LOGO_IMAGE_HEIGHT = "29px";
+import BrandLogo from "./BrandLogo";
+import LoginModal from "./LoginModal";
+import SignUpModal from "./SignUpModal";
 
 function SearchForm() {
   return (
@@ -23,14 +17,6 @@ function SearchForm() {
       />
     </Form>
   );
-}
-
-function LoginButton() {
-  return <Button>로그인</Button>;
-}
-
-function SignUpButton() {
-  return <Button>회원가입</Button>;
 }
 
 function ReviewLink() {
@@ -46,6 +32,9 @@ function AvatarLink({ userId, imgSrc, imgSize }) {
 }
 const AVATAR_SIZE = "28px";
 
+const LOGO_IMAGE_WIDTH = "151px";
+const LOGO_IMAGE_HEIGHT = "29px";
+
 export default function NavBar({ height }) {
   const userId = 1;
   const isAuthenticated = true;
@@ -54,11 +43,11 @@ export default function NavBar({ height }) {
       <Container fluid className="align-items-center">
         <BrandLogo imgWidth={LOGO_IMAGE_WIDTH} imgHeight={LOGO_IMAGE_HEIGHT} />
         <SearchForm />
-        {isAuthenticated ? <ReviewLink /> : <LoginButton />}
+        {isAuthenticated ? <ReviewLink /> : <LoginModal />}
         {isAuthenticated ? (
           <AvatarLink userId={userId} imgSize={AVATAR_SIZE} />
         ) : (
-          <SignUpButton />
+          <SignUpModal />
         )}
       </Container>
     </Navbar>
