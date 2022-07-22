@@ -8,7 +8,7 @@ export default function BottomBar({ height, fontsize }) {
       <Container className="justify-content-center align-items-center">
         <Navbar.Brand sytle={{ color: "#d1d1d2", fontsize: fontsize }}>
           {"지금까지 "}
-          <em style={{ color: "#ff0558", "font-style": "normal" }}>
+          <em style={{ color: "#ff0558", fontStyle: "normal" }}>
             {`★ ${totalRatings.toLocaleString()} 개의 평가가 `}
           </em>
           {"쌓였어요."}
