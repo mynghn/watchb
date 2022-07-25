@@ -3,12 +3,15 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 
+import { signUp } from "../api";
+
 import BrandLogo from "./BrandLogo";
 import LoginModal from "./LoginModal";
 import FormInput from "./FormInput";
 
 const NAME_PROPS = {
   type: "text",
+  name: "username",
   placeholder: "이름",
   autoFocus: true,
   required: true,
@@ -19,6 +22,7 @@ const NAME_INVALID_MESSAGE = "정확하지 않은 이름입니다.";
 
 const EMAIL_PROPS = {
   type: "email",
+  name: "email",
   placeholder: "이메일",
   required: true,
 };
@@ -26,6 +30,7 @@ const EMAIL_INVALID_MESSAGE = "정확하지 않은 이메일입니다.";
 
 const PASSWORD_PROPS = {
   type: "password",
+  name: "password",
   placeholder: "비밀번호",
   required: true,
   minLength: 8,
@@ -42,25 +47,27 @@ const passwordValidation = (value) => {
 
 export default function SignUpModal() {
   const [show, setShow] = useState(false);
-  const handleClose = () => setShow(false);
-  const handleShow = () => setShow(true);
-
   const [isValidated, setisValidated] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
     const form = e.currentTarget;
-    if (!form.checkValidity()) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    const isValid = form.checkValidity();
     setisValidated(true);
+
+    if (isValid) {
+      const { username, email, password } = form;
+
+      await signUp(username.value, email.value, password.value);
+    }
   };
 
   return (
     <>
-      <Button onClick={handleShow}>회원가입</Button>
+      <Button onClick={() => setShow(true)}>회원가입</Button>
 
-      <Modal show={show} onHide={handleClose}>
+      <Modal show={show} onHide={() => setShow(false)}>
         <Modal.Header
           style={{
             border: "none",
@@ -89,11 +96,7 @@ export default function SignUpModal() {
             이미 가입하셨나요? <LoginModal />
           </div>
         </Modal.Body>
-        <Modal.Footer
-          style={{
-            justifyContent: "center",
-          }}
-        >
+        <Modal.Footer style={{ justifyContent: "center" }}>
           소셜 로그인
         </Modal.Footer>
       </Modal>
