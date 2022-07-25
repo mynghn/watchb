@@ -1,10 +1,11 @@
+from django.conf import settings
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from rest_framework_simplejwt.settings import api_settings as simple_jwt_settings
+from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .serializers import SignUpSerializer
@@ -30,9 +31,9 @@ class JWTObtainPairView(TokenObtainPairView):
         )
         # 2. refresh token in cookie
         response.set_cookie(
-            key=simple_jwt_settings["REFRESH_TOKEN_COOKIE_KEY"],
+            key=settings.JWT_REFRESH_TOKEN_COOKIE_KEY,
             value=serializer.validated_data["refresh"],
-            max_age=simple_jwt_settings["REFRESH_TOKEN_LIFETIME"].total_seconds(),
+            max_age=simplejwt_settings.REFRESH_TOKEN_LIFETIME.total_seconds(),
             secure=True,
             httponly=True,
         )

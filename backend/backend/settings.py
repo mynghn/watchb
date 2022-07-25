@@ -150,8 +150,8 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
-    "REFRESH_TOKEN_COOKIE_KEY": "refresh_token",
 }
+JWT_REFRESH_TOKEN_COOKIE_KEY = "refreshtoken"
 
 # CORS
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
