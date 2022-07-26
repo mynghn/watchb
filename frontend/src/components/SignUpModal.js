@@ -13,7 +13,7 @@ import FormInput from "./FormInput";
 
 const NAME_PROPS = {
   type: "text",
-  name: "username",
+  name: "usernameInput",
   placeholder: "이름",
   autoFocus: true,
   required: true,
@@ -24,7 +24,7 @@ const NAME_INVALID_MESSAGE = "정확하지 않은 이름입니다.";
 
 const EMAIL_PROPS = {
   type: "email",
-  name: "email",
+  name: "emailInput",
   placeholder: "이메일",
   required: true,
 };
@@ -32,7 +32,7 @@ const EMAIL_INVALID_MESSAGE = "정확하지 않은 이메일입니다.";
 
 const PASSWORD_PROPS = {
   type: "password",
-  name: "password",
+  name: "passwordInput",
   placeholder: "비밀번호",
   required: true,
   minLength: 8,
@@ -61,19 +61,22 @@ export default function SignUpModal() {
     setisValidated(true);
 
     if (isValid) {
-      const { username, email, password } = form;
+      const { usernameInput, emailInput, passwordInput } = form;
 
-      const { status: signUpStatus } = await signUp(
-        username.value,
-        email.value,
-        password.value
+      const {
+        data: { id: userId, username },
+        status: signUpStatus,
+      } = await signUp(
+        usernameInput.value,
+        emailInput.value,
+        passwordInput.value
       );
 
       if (signUpStatus === 201) {
         const {
           data: { access: accessToken },
-        } = await obtainJWT(email.value, password.value);
-        dispatch(login(accessToken));
+        } = await obtainJWT(emailInput.value, passwordInput.value);
+        dispatch(login({ accessToken, userId, username }));
       }
     }
   };

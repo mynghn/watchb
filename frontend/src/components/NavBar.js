@@ -22,9 +22,9 @@ function ReviewLink() {
   return <Link to="/review">평가하기</Link>;
 }
 
-function AvatarLink({ userId, imgSrc, imgSize }) {
+function AvatarLink({ username, imgSrc, imgSize }) {
   return (
-    <Link to={`users/${userId}`}>
+    <Link to={`users/${username}`}>
       <img src={imgSrc} alt="User avatar" width={imgSize} height={imgSize} />
     </Link>
   );
@@ -34,9 +34,7 @@ const AVATAR_SIZE = "28px";
 const LOGO_IMAGE_WIDTH = "151px";
 const LOGO_IMAGE_HEIGHT = "29px";
 
-export default function NavBar({ height }) {
-  const userId = 1;
-  const isAuthenticated = true;
+export default function NavBar({ height, isAuthenticated, username }) {
   return (
     <Navbar sticky="top" bg="white" variant="dark" style={{ height }}>
       <Container fluid className="align-items-center">
@@ -44,7 +42,7 @@ export default function NavBar({ height }) {
         <SearchForm />
         {isAuthenticated ? <ReviewLink /> : <LoginModal />}
         {isAuthenticated ? (
-          <AvatarLink userId={userId} imgSize={AVATAR_SIZE} />
+          <AvatarLink username={username} imgSize={AVATAR_SIZE} />
         ) : (
           <SignUpModal />
         )}
