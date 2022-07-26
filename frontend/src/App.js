@@ -1,9 +1,13 @@
 import { Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+
 import NavBar from "./components/NavBar";
 import Home from "./pages/Home";
 import Profile from "./pages/account/Profile";
 import BottomBar from "./components/BottomBar";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { refreshJWT, retrieveUser } from "./api";
+import { login, setUser } from "./store";
 
 const NAV_BAR_HEIGHT = "62px";
 const BOTTOM_BAR_HEIGHT = "62px";
@@ -11,6 +15,17 @@ const BOTTOM_BAR_FONTSIZE = "19px";
 
 function App() {
   const { isAuthenticated, username } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+
+  const silentLogin = () => {
+    refreshJWT()
+      .then(retrieveUser)
+      .then(({ data: { id: userId, username } }) => {
+        dispatch(setUser({ userId, username }));
+        dispatch(login());
+      });
+  };
+  useEffect(silentLogin, []);
   return (
     <div className="App">
       <NavBar
