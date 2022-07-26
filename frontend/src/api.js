@@ -2,6 +2,9 @@ import Axios from "axios";
 import store, { login, setToken, setUser } from "./store";
 
 export const BACKEND_HOST = process.env.REACT_APP_BACKEND_HOST;
+export const JWT_EXPIRY_TIME =
+  parseInt(process.env.REACT_APP_JWT_EXPIRY_TIME) || 1000 * 60 * 5;
+
 export const SIGN_UP_URI = "/api/accounts/";
 export const JWT_OBTAIN_URI = "/api/accounts/jwt/";
 export const JWT_REFRESH_URI = "/api/accounts/jwt/refresh/";
@@ -36,8 +39,14 @@ const onObtainJWTSuccess = (obtainJWTResponse) => {
     data: { access: accessToken },
   } = obtainJWTResponse;
   store.dispatch(setToken(accessToken));
+  setTimeout(() => {
+    refreshJWT();
+  }, JWT_EXPIRY_TIME - 60000);
 };
 export const obtainJWT = (email, password) =>
   axios
     .post(JWT_OBTAIN_URI, { email, password })
     .then((response) => onObtainJWTSuccess(response));
+
+export const refreshJWT = () =>
+  axios.post(JWT_REFRESH_URI).then(onObtainJWTSuccess);
