@@ -2,10 +2,8 @@ import { useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
-import { useDispatch } from "react-redux";
 
-import { signUp, obtainJWT } from "../api";
-import { login } from "../store";
+import { signUp } from "../api";
 
 import BrandLogo from "./BrandLogo";
 import LoginModal from "./LoginModal";
@@ -51,9 +49,7 @@ export default function SignUpModal() {
   const [show, setShow] = useState(false);
   const [isValidated, setisValidated] = useState(false);
 
-  const dispatch = useDispatch();
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     const form = e.currentTarget;
@@ -63,21 +59,7 @@ export default function SignUpModal() {
     if (isValid) {
       const { usernameInput, emailInput, passwordInput } = form;
 
-      const {
-        data: { id: userId, username },
-        status: signUpStatus,
-      } = await signUp(
-        usernameInput.value,
-        emailInput.value,
-        passwordInput.value
-      );
-
-      if (signUpStatus === 201) {
-        const {
-          data: { access: accessToken },
-        } = await obtainJWT(emailInput.value, passwordInput.value);
-        dispatch(login({ accessToken, userId, username }));
-      }
+      signUp(usernameInput.value, emailInput.value, passwordInput.value);
     }
   };
 
