@@ -4,7 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Provider } from "react-redux";
 
-import App from "./App";
+import WatchB from "./App";
 import store from "./store";
 import reportWebVitals from "./reportWebVitals";
 
@@ -13,7 +13,7 @@ root.render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <App />
+        <WatchB />
       </BrowserRouter>
     </Provider>
   </React.StrictMode>

@@ -13,7 +13,7 @@ const NAV_BAR_HEIGHT = "62px";
 const BOTTOM_BAR_HEIGHT = "62px";
 const BOTTOM_BAR_FONTSIZE = "19px";
 
-function App() {
+function WatchB() {
   const { isAuthenticated, username } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
@@ -36,7 +36,7 @@ function App() {
       <div className="Body bg-light">
         <Routes>
           <Route path="" element={<Home />}></Route>
-          <Route path="users/:userId" element={<Profile />}></Route>
+          <Route path="users/:username" element={<Profile />}></Route>
         </Routes>
       </div>
       <BottomBar height={BOTTOM_BAR_HEIGHT} fontsize={BOTTOM_BAR_FONTSIZE} />
@@ -44,4 +44,4 @@ function App() {
   );
 }
 
-export default App;
+export default WatchB;
