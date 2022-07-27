@@ -1,14 +1,16 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.generics import CreateAPIView, RetrieveAPIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.status import HTTP_200_OK
+from rest_framework.views import APIView
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .permissions import IsSelfOrAdmin
-from .serializers import UserRetrieveSerializer, SignUpSerializer
+from .serializers import SignUpSerializer, UserRetrieveSerializer
 
 
 class SignUpView(CreateAPIView):
@@ -49,3 +51,18 @@ class JWTRefreshView(JWTResponseMixin, TokenRefreshView):
             {"refresh": request.COOKIES.get(settings.JWT_REFRESH_TOKEN_COOKIE_KEY)}
         )
         return super().post(request, *args, **kwargs)
+
+
+class ExpireRefreshTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        response = Response(status=HTTP_200_OK)
+        response.set_cookie(
+            key=settings.JWT_REFRESH_TOKEN_COOKIE_KEY,
+            value="",
+            expires="Mon, 1 Jan 1900 00:00:00 GMT",
+            secure=True,
+            httponly=True,
+        )
+        return response

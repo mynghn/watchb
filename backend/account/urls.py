@@ -7,4 +7,9 @@ urlpatterns = [
     path("<int:pk>/", views.UserRetrieveView.as_view(), name="sign-up"),
     path("jwt/", views.JWTObtainPairView.as_view(), name="token-obtain-pair"),
     path("jwt/refresh/", views.JWTRefreshView.as_view(), name="token-refresh"),
+    path(
+        "jwt/expire/",
+        views.ExpireRefreshTokenView.as_view(),
+        name="refreshtoken-expire",
+    ),
 ]
