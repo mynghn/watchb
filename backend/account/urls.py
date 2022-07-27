@@ -3,13 +3,21 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("", views.SignUpView.as_view(), name="sign-up"),
-    path("<int:pk>/", views.UserRetrieveView.as_view(), name="sign-up"),
-    path("jwt/", views.JWTObtainPairView.as_view(), name="token-obtain-pair"),
-    path("jwt/refresh/", views.JWTRefreshView.as_view(), name="token-refresh"),
+    path("users/", views.SignUpView.as_view(), name="sign-up"),
+    path("users/<int:pk>/", views.UserRetrieveView.as_view(), name="user-detail"),
     path(
-        "jwt/expire/",
-        views.ExpireRefreshTokenView.as_view(),
-        name="refreshtoken-expire",
+        "auth/token-pair/obtain/",
+        views.JWTObtainPairView.as_view(),
+        name="obtain-token-pair",
+    ),
+    path(
+        "auth/token-pair/refresh/",
+        views.JWTRefreshView.as_view(),
+        name="refrsh-token-pair",
+    ),
+    path(
+        "auth/refresh-token/expire/",
+        views.RefreshTokenExpireView.as_view(),
+        name="expire-refresh-token",
     ),
 ]

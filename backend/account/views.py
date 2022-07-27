@@ -53,7 +53,7 @@ class JWTRefreshView(JWTResponseMixin, TokenRefreshView):
         return super().post(request, *args, **kwargs)
 
 
-class ExpireRefreshTokenView(APIView):
+class RefreshTokenExpireView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request) -> Response:
