@@ -25,8 +25,11 @@ export default function FormInput({
   };
 
   const handleChange = (e) => {
+    const currValidity = checkValidity(e.currentTarget);
     if (hasBlurred) {
-      setValidity(checkValidity(e.currentTarget));
+      setValidity(currValidity);
+    } else if (currValidity === true) {
+      setIsValid(true);
     }
   };
   const handleBlur = (e) => {
