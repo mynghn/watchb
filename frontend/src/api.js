@@ -6,10 +6,10 @@ export const BACKEND_HOST = process.env.REACT_APP_BACKEND_HOST;
 export const JWT_EXPIRY_TIME =
   parseInt(process.env.REACT_APP_JWT_EXPIRY_TIME) || 1000 * 60 * 5;
 
-export const ACCOUNTS_URI = "/api/accounts/";
-export const JWT_OBTAIN_URI = "/api/accounts/jwt/";
-export const JWT_REFRESH_URI = "/api/accounts/jwt/refresh/";
-export const JWT_EXPIRE_URI = "/api/accounts/jwt/expire/";
+export const ACCOUNTS_URI = "/api/users/";
+export const OBTAIN_TOKEN_PAIR_URI = "/api/auth/token-pair/obtain/";
+export const REFRESH_TOKEN_PAIR_URI = "/api/auth/token-pair/refresh/";
+export const EXPIRE_REFRESH_TOKEN_URI = "/api/auth/refresh-token/expire/";
 
 export const axios = Axios.create({
   baseURL: BACKEND_HOST,
@@ -48,11 +48,11 @@ const onObtainJWTSuccess = (obtainJWTResponse) => {
 };
 export const obtainJWT = (email, password) =>
   axios
-    .post(JWT_OBTAIN_URI, { email, password })
+    .post(OBTAIN_TOKEN_PAIR_URI, { email, password })
     .then((response) => onObtainJWTSuccess(response));
 
 export const refreshJWT = () =>
-  axios.post(JWT_REFRESH_URI).then(onObtainJWTSuccess);
+  axios.post(REFRESH_TOKEN_PAIR_URI).then(onObtainJWTSuccess);
 
 export const retrieveUser = () => {
   const {
@@ -64,4 +64,5 @@ export const retrieveUser = () => {
   }
 };
 
-export const deleteRefreshTokenCookie = () => axios.post(JWT_EXPIRE_URI);
+export const deleteRefreshTokenCookie = () =>
+  axios.post(EXPIRE_REFRESH_TOKEN_URI);
