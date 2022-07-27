@@ -9,6 +9,7 @@ export const JWT_EXPIRY_TIME =
 export const ACCOUNTS_URI = "/api/accounts/";
 export const JWT_OBTAIN_URI = "/api/accounts/jwt/";
 export const JWT_REFRESH_URI = "/api/accounts/jwt/refresh/";
+export const JWT_EXPIRE_URI = "/api/accounts/jwt/expire/";
 
 export const axios = Axios.create({
   baseURL: BACKEND_HOST,
@@ -62,3 +63,5 @@ export const retrieveUser = () => {
     return axios.get(`${ACCOUNTS_URI}${userId}/`);
   }
 };
+
+export const deleteRefreshTokenCookie = () => axios.post(JWT_EXPIRE_URI);
