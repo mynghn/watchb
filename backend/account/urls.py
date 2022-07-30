@@ -1,10 +1,13 @@
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 
 from . import views
 
+router = DefaultRouter()
+router.register("users", views.UserViewSet, basename="user")
+
 urlpatterns = [
-    path("users/", views.SignUpView.as_view(), name="sign-up"),
-    path("users/<int:pk>/", views.UserRetrieveView.as_view(), name="user-detail"),
+    *router.urls,
     path(
         "auth/token-pair/obtain/",
         views.JWTObtainPairView.as_view(),

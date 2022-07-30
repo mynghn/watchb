@@ -1,27 +1,50 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from rest_framework.generics import CreateAPIView, RetrieveAPIView
+from rest_framework.mixins import CreateModelMixin, ListModelMixin, RetrieveModelMixin
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.serializers import Serializer
 from rest_framework.status import HTTP_200_OK
 from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .permissions import IsSelfOrAdmin
-from .serializers import SignUpSerializer, UserRetrieveSerializer
+from .serializers import SignUpSerializer, UserDetailSerializer, UserListSerializer
+
+User = get_user_model()
 
 
-class SignUpView(CreateAPIView):
-    serializer_class = SignUpSerializer
-    permission_classes = [AllowAny]
+class UserViewSet(CreateModelMixin, RetrieveModelMixin, ListModelMixin, GenericViewSet):
+    def get_serializer_class(self):
+        if self.action == "create" or (self.action == "metadata" and not self.detail):
+            return SignUpSerializer
+        elif self.action == "retrieve":
+            return UserDetailSerializer
+        elif self.action == "list":
+            return UserListSerializer
+        else:
+            return Serializer
 
+    def get_permissions(self):
+        if self.action == ("create", "list"):
+            return [AllowAny()]
+        elif self.action == "retrieve":
+            return [IsSelfOrAdmin()]
+        else:
+            return super().get_permissions()
 
-class UserRetrieveView(RetrieveAPIView):
-    queryset = get_user_model().objects.all()
-    serializer_class = UserRetrieveSerializer
-    permission_classes = [IsSelfOrAdmin]
+    def get_queryset(self):
+        if self.action == "list":
+            user_search_serializer = self.get_serializer(
+                data=self.request.query_params.dict()
+            )
+            user_search_serializer.is_valid(raise_exception=True)
+            return User.objects.filter(**user_search_serializer.validated_data)
+        else:
+            return User.objects.all()
 
 
 class JWTResponseMixin:
@@ -56,7 +79,7 @@ class JWTRefreshView(JWTResponseMixin, TokenRefreshView):
 class RefreshTokenExpireView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request) -> Response:
+    def post(self, request: Request) -> Response:
         response = Response(status=HTTP_200_OK)
         response.set_cookie(
             key=settings.JWT_REFRESH_TOKEN_COOKIE_KEY,
