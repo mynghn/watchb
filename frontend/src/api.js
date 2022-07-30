@@ -6,7 +6,7 @@ export const BACKEND_HOST = process.env.REACT_APP_BACKEND_HOST;
 export const JWT_EXPIRY_TIME =
   parseInt(process.env.REACT_APP_JWT_EXPIRY_TIME) || 1000 * 60 * 5;
 
-export const ACCOUNTS_URI = "/api/users/";
+export const USERS_URI = "/api/users/";
 export const OBTAIN_TOKEN_PAIR_URI = "/api/auth/token-pair/obtain/";
 export const REFRESH_TOKEN_PAIR_URI = "/api/auth/token-pair/refresh/";
 export const EXPIRE_REFRESH_TOKEN_URI = "/api/auth/refresh-token/expire/";
@@ -28,7 +28,7 @@ const onSignUpSucess = async (signUpResponse, email, password) => {
 };
 export const signUp = (username, email, password) => {
   axios
-    .post(ACCOUNTS_URI, {
+    .post(USERS_URI, {
       username,
       email,
       password,
@@ -60,7 +60,7 @@ export const retrieveUser = () => {
   } = store.getState();
   if (accessToken) {
     const { user_id: userId } = jwtDecode(accessToken);
-    return axios.get(`${ACCOUNTS_URI}${userId}/`);
+    return axios.get(`${USERS_URI}${userId}/`);
   }
 };
 
