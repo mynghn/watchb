@@ -1,11 +1,22 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.validators import MinLengthValidator
 from django.db import models
 
 
 class UserManager(UserManager):
+    def create_user(
+        self,
+        email: str,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        **extra_fields,
+    ) -> User:
+        return super().create_user(username, email, password, **extra_fields)
+
     def create(self, *args, **kwargs) -> User:
         return self.create_user(*args, **kwargs)
 
