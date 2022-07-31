@@ -38,7 +38,7 @@ const PASSWORD_PROPS = {
 };
 const PASSWORD_INVALID_MESSAGE =
   "비밀번호는 영문, 숫자, 특수문자 중 2개 이상을 조합하여 최소 8자리 이상이어야 합니다.";
-const passwordValidation = (value) => {
+const checkPasswordPattern = (value) => {
   const en = /[a-z]/i;
   const num = /\d/;
   const spcialChar = /[^a-z\d]/i;
@@ -86,7 +86,7 @@ export default function SignUpModal() {
               {...EMAIL_PROPS}
             />
             <FormInput
-              validators={[passwordValidation]}
+              validators={[checkPasswordPattern]}
               invalidMessage={PASSWORD_INVALID_MESSAGE}
               {...PASSWORD_PROPS}
             />
