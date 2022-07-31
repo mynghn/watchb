@@ -2,7 +2,7 @@ import { useState } from "react";
 import Form from "react-bootstrap/Form";
 
 export default function FormInput({
-  validationFunc,
+  validators,
   validMessage,
   invalidMessage,
   ...htmlInputProps
@@ -16,26 +16,41 @@ export default function FormInput({
     setIsinValid(!validity);
   };
 
-  const checkValidity = (inputDOM) => {
+  const checkValidity = async (inputDOM) => {
     let validity = inputDOM.checkValidity();
-    if (typeof validationFunc === "function") {
-      validity = validity && validationFunc(inputDOM.value);
+
+    // extra validity check with custom validators
+    if (validity && Array.isArray(validators)) {
+      // filter out non-functions
+      const validatorFns = validators.filter(
+        (validator) => typeof validator === "function"
+      );
+      // check extra validities with ANDs
+      let extraValidity = true;
+      for (let idx = 0; idx < validatorFns.length; idx++) {
+        extraValidity &&= await validatorFns[idx](inputDOM.value);
+        if (!extraValidity) {
+          break;
+        }
+      }
+      validity = validity && extraValidity;
     }
+
     return validity;
   };
 
-  const handleChange = (e) => {
-    const currValidity = checkValidity(e.currentTarget);
+  const handleChange = async (e) => {
+    const currValidity = await checkValidity(e.currentTarget);
     if (hasBlurred) {
       setValidity(currValidity);
-    } else if (currValidity === true) {
-      setIsValid(true);
+    } else {
+      setIsValid(currValidity || null);
     }
   };
-  const handleBlur = (e) => {
+  const handleBlur = async (e) => {
     if (!hasBlurred) {
       setHasBlurred(true);
-      setValidity(checkValidity(e.currentTarget));
+      setValidity(await checkValidity(e.currentTarget));
     }
   };
 

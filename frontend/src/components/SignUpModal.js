@@ -86,7 +86,7 @@ export default function SignUpModal() {
               {...EMAIL_PROPS}
             />
             <FormInput
-              validationFunc={passwordValidation}
+              validators={[passwordValidation]}
               invalidMessage={PASSWORD_INVALID_MESSAGE}
               {...PASSWORD_PROPS}
             />
