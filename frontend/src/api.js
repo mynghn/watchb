@@ -11,6 +11,8 @@ export const OBTAIN_TOKEN_PAIR_URI = "/api/auth/token-pair/obtain/";
 export const REFRESH_TOKEN_PAIR_URI = "/api/auth/token-pair/refresh/";
 export const EXPIRE_REFRESH_TOKEN_URI = "/api/auth/refresh-token/expire/";
 
+export const INVALID_EMAIL_PATTERN_MESSAGE = "Enter a valid email address.";
+
 export const axios = Axios.create({
   baseURL: BACKEND_HOST,
   withCredentials: true,
@@ -66,3 +68,10 @@ export const retrieveUser = () => {
 
 export const deleteRefreshTokenCookie = () =>
   axios.post(EXPIRE_REFRESH_TOKEN_URI);
+
+export const searchUsers = (params) => axios.get(USERS_URI, { params });
+
+export const isEmailUnique = async (email) => {
+  const { data } = await searchUsers({ email });
+  return data.length === 0; // user with this email doesn't exist
+};

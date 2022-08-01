@@ -3,7 +3,12 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 
-import { signUp } from "../api";
+import {
+  signUp,
+  searchUsers,
+  isEmailUnique,
+  INVALID_EMAIL_PATTERN_MESSAGE,
+} from "../api";
 
 import BrandLogo from "./BrandLogo";
 import LoginModal from "./LoginModal";
@@ -18,7 +23,7 @@ const NAME_PROPS = {
   minLength: 2,
   maxLength: 20,
 };
-const NAME_INVALID_MESSAGE = "정확하지 않은 이름입니다.";
+const DEFAULT_NAME_INVALID_MESSAGE = "정확하지 않은 이름입니다.";
 
 const EMAIL_PROPS = {
   type: "email",
@@ -26,7 +31,34 @@ const EMAIL_PROPS = {
   placeholder: "이메일",
   required: true,
 };
-const EMAIL_INVALID_MESSAGE = "정확하지 않은 이메일입니다.";
+const DEFAULT_EMAIL_INVALID_MESSAGE = "정확하지 않은 이메일입니다.";
+const checkEmailPattern = async (email) => {
+  try {
+    await searchUsers({ email });
+  } catch (error) {
+    const {
+      response: {
+        data: { email: errorMessages },
+      },
+    } = error;
+    if (
+      errorMessages &&
+      Array.isArray(errorMessages) &&
+      errorMessages.includes(INVALID_EMAIL_PATTERN_MESSAGE)
+    ) {
+      return { isValid: false };
+    }
+  }
+  return { isValid: true };
+};
+const EMAIL_REDUNDANCY_INVALID_MESSAGE = "이미 가입된 이메일입니다.";
+const checkEmailRedundancy = async (email) => {
+  const isValid = await isEmailUnique(email);
+  return {
+    isValid,
+    message: isValid ? "" : EMAIL_REDUNDANCY_INVALID_MESSAGE,
+  };
+};
 
 const PASSWORD_PROPS = {
   type: "password",
@@ -36,13 +68,20 @@ const PASSWORD_PROPS = {
   minLength: 8,
   maxLength: 20,
 };
-const PASSWORD_INVALID_MESSAGE =
-  "비밀번호는 영문, 숫자, 특수문자 중 2개 이상을 조합하여 최소 8자리 이상이어야 합니다.";
-const checkPasswordPattern = (value) => {
+const DEFAULT_PASSWORD_INVALID_MESSAGE =
+  "비밀번호는 최소 8자리 이상이어야 합니다.";
+const PASSWORD_PATTERN_INVALID_MESSAGE =
+  "비밀번호는 영문, 숫자, 특수문자 중 2가지 이상을 조합해야 합니다.";
+const checkPasswordPattern = (password) => {
   const en = /[a-z]/i;
   const num = /\d/;
   const spcialChar = /[^a-z\d]/i;
-  return en.test(value) + num.test(value) + spcialChar.test(value) >= 2;
+  const isValid =
+    en.test(password) + num.test(password) + spcialChar.test(password) >= 2;
+  return {
+    isValid,
+    message: isValid ? "" : PASSWORD_PATTERN_INVALID_MESSAGE,
+  };
 };
 
 export default function SignUpModal() {
@@ -58,7 +97,6 @@ export default function SignUpModal() {
 
     if (isValid) {
       const { usernameInput, emailInput, passwordInput } = form;
-
       signUp(usernameInput.value, emailInput.value, passwordInput.value);
     }
   };
@@ -80,14 +118,18 @@ export default function SignUpModal() {
         </Modal.Header>
         <Modal.Body style={{ textAlign: "center" }}>
           <Form noValidate validated={isValidated} onSubmit={handleSubmit}>
-            <FormInput invalidMessage={NAME_INVALID_MESSAGE} {...NAME_PROPS} />
             <FormInput
-              invalidMessage={EMAIL_INVALID_MESSAGE}
+              defaultMessages={{ invalid: DEFAULT_NAME_INVALID_MESSAGE }}
+              {...NAME_PROPS}
+            />
+            <FormInput
+              validators={[checkEmailPattern, checkEmailRedundancy]}
+              defaultMessages={{ invalid: DEFAULT_EMAIL_INVALID_MESSAGE }}
               {...EMAIL_PROPS}
             />
             <FormInput
               validators={[checkPasswordPattern]}
-              invalidMessage={PASSWORD_INVALID_MESSAGE}
+              defaultMessages={{ invalid: DEFAULT_PASSWORD_INVALID_MESSAGE }}
               {...PASSWORD_PROPS}
             />
             <Button type="submit">회원가입</Button>
