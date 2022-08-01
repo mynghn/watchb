@@ -3,49 +3,52 @@ import Form from "react-bootstrap/Form";
 
 export default function FormInput({
   validators,
-  validMessage,
-  invalidMessage,
+  defaultMessages = { valid: "", invalid: "" },
   ...htmlInputProps
 }) {
   const [hasBlurred, setHasBlurred] = useState(false);
 
-  const [isValid, setIsValid] = useState();
+  const [validation, setValidation] = useState({ isValid: null, message: "" });
+  const { valid: defaultVldMsg, invalid: defaultInvldMsg } = defaultMessages;
+
   const [showValid, setShowValid] = useState(false);
   const [showInvalid, setShowInvalid] = useState(false);
-  const displayValidity = () => {
+  const displayValidation = () => {
+    const { isValid } = validation;
     setShowValid(isValid);
     if (hasBlurred) {
       setShowInvalid(!isValid);
     }
   };
-  useEffect(displayValidity, [isValid, hasBlurred]);
+  useEffect(displayValidation, [validation, hasBlurred]);
 
   const checkValidity = async (inputDOM) => {
-    let validity = inputDOM.checkValidity();
+    let isValid = inputDOM.checkValidity();
+    let message = isValid ? defaultVldMsg : defaultInvldMsg;
 
     // extra validity check with custom validators
-    if (validity && Array.isArray(validators)) {
+    if (isValid && Array.isArray(validators)) {
       // filter out non-functions
       const validatorFns = validators.filter(
         (validator) => typeof validator === "function"
       );
       // check extra validities with ANDs
-      let extraValidity = true;
       for (let idx = 0; idx < validatorFns.length; idx++) {
-        extraValidity &&= await validatorFns[idx](inputDOM.value);
-        if (!extraValidity) {
-          break;
-        }
+        const { isValid: isVld, message: msg } = await validatorFns[idx](
+          inputDOM.value
+        );
+        // accumulate validation results
+        isValid &&= isVld;
+        if (msg && typeof msg === "string") message = msg;
+        // break when any validator fails
+        if (!isValid) break;
       }
-      validity = validity && extraValidity;
     }
-
-    return validity;
+    return { isValid, message };
   };
 
   const handleChange = async (e) => {
-    const currValidity = await checkValidity(e.currentTarget);
-    setIsValid(currValidity);
+    setValidation(await checkValidity(e.currentTarget));
   };
   const handleBlur = () => {
     if (!hasBlurred) setHasBlurred(true);
@@ -60,11 +63,11 @@ export default function FormInput({
         onBlur={handleBlur}
         {...htmlInputProps}
       />
-      <Form.Control.Feedback type="valid" style={{ textAlign: "start" }}>
-        {validMessage}
-      </Form.Control.Feedback>
-      <Form.Control.Feedback type="invalid" style={{ textAlign: "start" }}>
-        {invalidMessage}
+      <Form.Control.Feedback
+        type={validation.isValid ? "valid" : "invalid"}
+        style={{ textAlign: "start" }}
+      >
+        {validation.message}
       </Form.Control.Feedback>
     </Form.Group>
   );
