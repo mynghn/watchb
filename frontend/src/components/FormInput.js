@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Form from "react-bootstrap/Form";
 
 export default function FormInput({
@@ -10,11 +10,15 @@ export default function FormInput({
   const [hasBlurred, setHasBlurred] = useState(false);
 
   const [isValid, setIsValid] = useState();
-  const [isInvalid, setIsinValid] = useState();
-  const setValidity = (validity) => {
-    setIsValid(validity);
-    setIsinValid(!validity);
+  const [showValid, setShowValid] = useState(false);
+  const [showInvalid, setShowInvalid] = useState(false);
+  const displayValidity = () => {
+    setShowValid(isValid);
+    if (hasBlurred) {
+      setShowInvalid(!isValid);
+    }
   };
+  useEffect(displayValidity, [isValid, hasBlurred]);
 
   const checkValidity = async (inputDOM) => {
     let validity = inputDOM.checkValidity();
@@ -41,24 +45,17 @@ export default function FormInput({
 
   const handleChange = async (e) => {
     const currValidity = await checkValidity(e.currentTarget);
-    if (hasBlurred) {
-      setValidity(currValidity);
-    } else {
-      setIsValid(currValidity || null);
-    }
+    setIsValid(currValidity);
   };
-  const handleBlur = async (e) => {
-    if (!hasBlurred) {
-      setHasBlurred(true);
-      setValidity(await checkValidity(e.currentTarget));
-    }
+  const handleBlur = () => {
+    if (!hasBlurred) setHasBlurred(true);
   };
 
   return (
     <Form.Group>
       <Form.Control
-        isValid={isValid}
-        isInvalid={isInvalid}
+        isValid={showValid}
+        isInvalid={showInvalid}
         onChange={handleChange}
         onBlur={handleBlur}
         {...htmlInputProps}
