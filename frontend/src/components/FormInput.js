@@ -9,7 +9,8 @@ export default function FormInput({
   const [hasBlurred, setHasBlurred] = useState(false);
 
   const [validation, setValidation] = useState({ isValid: null, message: "" });
-  const { valid: defaultVldMsg, invalid: defaultInvldMsg } = defaultMessages;
+  const getDefaultMessage = (isValid) =>
+    isValid ? defaultMessages.valid : defaultMessages.invalid;
 
   const [showValid, setShowValid] = useState(false);
   const [showInvalid, setShowInvalid] = useState(false);
@@ -24,7 +25,7 @@ export default function FormInput({
 
   const checkValidity = async (inputDOM) => {
     let isValid = inputDOM.checkValidity();
-    let message = isValid ? defaultVldMsg : defaultInvldMsg;
+    let message = getDefaultMessage(isValid);
 
     // extra validity check with custom validators
     if (isValid && Array.isArray(validators)) {
@@ -39,7 +40,8 @@ export default function FormInput({
         );
         // accumulate validation results
         isValid &&= isVld;
-        if (msg && typeof msg === "string") message = msg;
+        message =
+          msg && typeof msg === "string" ? msg : getDefaultMessage(isVld);
         // break when any validator fails
         if (!isValid) break;
       }
