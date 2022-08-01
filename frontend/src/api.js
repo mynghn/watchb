@@ -71,7 +71,7 @@ export const deleteRefreshTokenCookie = () =>
 
 export const searchUsers = (params) => axios.get(USERS_URI, { params });
 
-export const isEmailUnique = async (email) => {
+export const emailAlreadyRegistered = async (email) => {
   const { data } = await searchUsers({ email });
-  return data.length === 0; // user with this email doesn't exist
+  return data.length > 0; // user with this email does exist
 };

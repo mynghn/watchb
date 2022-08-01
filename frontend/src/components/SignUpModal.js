@@ -5,8 +5,7 @@ import Modal from "react-bootstrap/Modal";
 
 import {
   signUp,
-  searchUsers,
-  isEmailUnique,
+  emailAlreadyRegistered,
   INVALID_EMAIL_PATTERN_MESSAGE,
 } from "../api";
 
@@ -32,9 +31,15 @@ const EMAIL_PROPS = {
   required: true,
 };
 const DEFAULT_EMAIL_INVALID_MESSAGE = "정확하지 않은 이메일입니다.";
-const checkEmailPattern = async (email) => {
+const EMAIL_REDUNDANCY_INVALID_MESSAGE = "이미 가입된 이메일입니다.";
+const checkEmailPatternAndRedundancy = async (email) => {
+  let isValid = true;
+  let message;
   try {
-    await searchUsers({ email });
+    if (await emailAlreadyRegistered(email)) {
+      isValid = false;
+      message = EMAIL_REDUNDANCY_INVALID_MESSAGE;
+    }
   } catch (error) {
     const {
       response: {
@@ -46,18 +51,10 @@ const checkEmailPattern = async (email) => {
       Array.isArray(errorMessages) &&
       errorMessages.includes(INVALID_EMAIL_PATTERN_MESSAGE)
     ) {
-      return { isValid: false };
+      isValid = false;
     }
   }
-  return { isValid: true };
-};
-const EMAIL_REDUNDANCY_INVALID_MESSAGE = "이미 가입된 이메일입니다.";
-const checkEmailRedundancy = async (email) => {
-  const isValid = await isEmailUnique(email);
-  return {
-    isValid,
-    message: isValid ? "" : EMAIL_REDUNDANCY_INVALID_MESSAGE,
-  };
+  return { isValid, message };
 };
 
 const PASSWORD_PROPS = {
@@ -123,7 +120,7 @@ export default function SignUpModal() {
               {...NAME_PROPS}
             />
             <FormInput
-              validators={[checkEmailPattern, checkEmailRedundancy]}
+              validators={[checkEmailPatternAndRedundancy]}
               defaultMessages={{ invalid: DEFAULT_EMAIL_INVALID_MESSAGE }}
               {...EMAIL_PROPS}
             />
