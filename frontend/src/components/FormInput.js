@@ -6,22 +6,30 @@ export default function FormInput({
   defaultMessages = { valid: "", invalid: "" },
   ...htmlInputProps
 }) {
-  const [hasBlurred, setHasBlurred] = useState(false);
-
+  // validation state
   const [validation, setValidation] = useState({ isValid: null, message: "" });
   const getDefaultMessage = (isValid) =>
     isValid ? defaultMessages.valid : defaultMessages.invalid;
 
-  const [showValid, setShowValid] = useState(false);
-  const [showInvalid, setShowInvalid] = useState(false);
+  // determine display invalid style or not
+  const [hasBlurred, setHasBlurred] = useState(false);
+  const [inputValueEmpty, setInputValueEmpty] = useState(true);
+  const [displayInvalid, setDisplayInvalid] = useState(false);
+  const updateDisplayInvalid = () => {
+    setDisplayInvalid(hasBlurred && !inputValueEmpty);
+  };
+  useEffect(updateDisplayInvalid, [hasBlurred, inputValueEmpty]);
+
+  // display validation result
+  const [validStyle, setValidStyle] = useState(false);
+  const [invalidStyle, setInvalidStyle] = useState(false);
   const displayValidation = () => {
     const { isValid } = validation;
-    setShowValid(isValid);
-    if (hasBlurred) {
-      setShowInvalid(!isValid);
-    }
+    setValidStyle(isValid);
+    if (displayInvalid) setInvalidStyle(!isValid);
+    else setInvalidStyle(false);
   };
-  useEffect(displayValidation, [validation, hasBlurred]);
+  useEffect(displayValidation, [validation, displayInvalid]);
 
   const checkValidity = async (inputDOM) => {
     let isValid = inputDOM.checkValidity();
@@ -50,7 +58,9 @@ export default function FormInput({
   };
 
   const handleChange = async (e) => {
-    setValidation(await checkValidity(e.currentTarget));
+    const inputDOM = e.currentTarget;
+    setInputValueEmpty(!Boolean(inputDOM.value));
+    setValidation(await checkValidity(inputDOM));
   };
   const handleBlur = () => {
     if (!hasBlurred) setHasBlurred(true);
@@ -59,8 +69,8 @@ export default function FormInput({
   return (
     <Form.Group>
       <Form.Control
-        isValid={showValid}
-        isInvalid={showInvalid}
+        isValid={validStyle}
+        isInvalid={invalidStyle}
         onChange={handleChange}
         onBlur={handleBlur}
         {...htmlInputProps}
