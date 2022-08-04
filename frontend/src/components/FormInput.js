@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Form from "react-bootstrap/Form";
+
+import useEffectOnUpdates from "../hooks/useEffectOnUpdates";
 
 export default function FormInput({
   validators,
@@ -18,7 +20,7 @@ export default function FormInput({
   const updateDisplayInvalid = () => {
     setDisplayInvalid(hasBlurred && !inputValueEmpty);
   };
-  useEffect(updateDisplayInvalid, [hasBlurred, inputValueEmpty]);
+  useEffectOnUpdates(updateDisplayInvalid, [hasBlurred, inputValueEmpty]);
 
   // display validation result
   const [validStyle, setValidStyle] = useState(false);
@@ -29,7 +31,7 @@ export default function FormInput({
     if (displayInvalid) setInvalidStyle(!isValid);
     else setInvalidStyle(false);
   };
-  useEffect(displayValidation, [validation, displayInvalid]);
+  useEffectOnUpdates(displayValidation, [validation, displayInvalid]);
 
   const checkValidity = async (inputDOM) => {
     let isValid = inputDOM.checkValidity();
