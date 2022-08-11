@@ -75,11 +75,11 @@ export default function LoginModal() {
         <Modal.Body style={{ textAlign: "center" }}>
           <Form noValidate validated={isValidated} onSubmit={handleSubmit}>
             <FormInput
-              invalidMessage={EMAIL_INVALID_MESSAGE}
+              defaultMessages={{ invalid: EMAIL_INVALID_MESSAGE }}
               {...EMAIL_PROPS}
             />
             <FormInput
-              invalidMessage={PASSWORD_INVALID_MESSAGE}
+              defaultMessages={{ invalid: PASSWORD_INVALID_MESSAGE }}
               {...PASSWORD_PROPS}
             />
             <Button type="submit">로그인</Button>
