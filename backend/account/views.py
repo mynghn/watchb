@@ -29,7 +29,7 @@ class UserViewSet(CreateModelMixin, RetrieveModelMixin, ListModelMixin, GenericV
             return Serializer
 
     def get_permissions(self):
-        if self.action == ("create", "list"):
+        if self.action in ("create", "list"):
             return [AllowAny()]
         elif self.action == "retrieve":
             return [IsSelfOrAdmin()]
