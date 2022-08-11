@@ -85,7 +85,5 @@ class RefreshTokenExpireView(APIView):
             key=settings.JWT_REFRESH_TOKEN_COOKIE_KEY,
             value="",
             expires="Mon, 1 Jan 1900 00:00:00 GMT",
-            secure=True,
-            httponly=True,
         )
         return response
