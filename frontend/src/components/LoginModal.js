@@ -16,6 +16,7 @@ const EMAIL_PROPS = {
   type: "email",
   name: "emailInput",
   placeholder: "이메일",
+  autoFocus: true,
   required: true,
 };
 const EMAIL_INVALID_MESSAGE = "정확하지 않은 이메일입니다.";
