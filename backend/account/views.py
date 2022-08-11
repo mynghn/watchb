@@ -57,7 +57,7 @@ class JWTResponseMixin:
             key=settings.JWT_REFRESH_TOKEN_COOKIE_KEY,
             value=refresh_token,
             max_age=simplejwt_settings.REFRESH_TOKEN_LIFETIME.total_seconds(),
-            secure=True,
+            secure=not settings.DEBUG,
             httponly=True,
         )
 
