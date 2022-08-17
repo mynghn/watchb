@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "corsheaders",
     # 3. Custom
     "account",
+    "movies",
 ]
 
 MIDDLEWARE = [
