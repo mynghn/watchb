@@ -19,6 +19,7 @@ black = "^22.6.0"
 ipython = "^8.4.0"
 jupyter = "^1.0.0"
 httpie = "^3.2.1"
+jupyter-contrib-nbextensions = "^0.5.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
