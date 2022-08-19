@@ -4,8 +4,8 @@ from django.db import models
 class Movie(models.Model):
     title = models.CharField(max_length=200)
     release_date = models.DateField()
-    country = models.CharField()  # choices: Open API 스펙 보고 결정
-    genre = models.CharField()  # choices: Open API 스펙 보고 결정
+    countries = models.ManyToManyField("Country")
+    genres = models.ManyToManyField("Genre")
     running_time = models.DurationField()
 
     ALL_AGE = ("ALL", "전체관람가")
@@ -56,6 +56,17 @@ class Character(models.Model):
     role = models.CharField()  # choices: Open API 스펙 보고 결정
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
     actor = models.ForeignKey(Actor, on_delete=models.CASCADE)
+
+
+class Country(models.Model):
+    # follows ISO 3166-1
+    alpha_2 = models.CharField(max_length=2, primary_key=True)
+    name = models.CharField(max_length=50)
+
+
+class Genre(models.Model):
+    # from KMDb genre list
+    name = models.CharField(max_length=7)
 
 
 class Photo(models.Model):
