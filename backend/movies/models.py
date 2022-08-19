@@ -69,14 +69,25 @@ class Genre(models.Model):
     name = models.CharField(max_length=7)
 
 
-class Photo(models.Model):
+class MovieImage(models.Model):
     def image_upload_to(self, filename):
         modelname = self.__class__.__name__.lower()
         return f"movies/{self.movie_id}/{modelname}s/{filename}"
 
-    image_url = models.ImageField(upload_to=image_upload_to)
+    image = models.ImageField(upload_to=image_upload_to)
 
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
+
+    class Meta:
+        abstract = True
+
+
+class Poster(MovieImage):
+    pass
+
+
+class Still(MovieImage):
+    pass
 
 
 class Video(models.Model):
