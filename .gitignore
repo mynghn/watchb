@@ -98,6 +98,9 @@ GitHub.sublime-settings
 !**/.vscode/extensions.json 
 .history
 
+# Jupyter Notebook
+jupyter/
+
 
 # 2. Frontend
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
