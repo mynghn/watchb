@@ -31,7 +31,7 @@ class People(models.Model):
 
     def avatar_upload_to(self, filename):
         modelname = self.__class__.__name__.lower()
-        return f"{modelname}s/{self.id}/avatar/{filename}"
+        return f"{modelname}/{self.id}/avatar/{filename}"
 
     avatar = models.ImageField(blank=True, upload_to=avatar_upload_to)
 
