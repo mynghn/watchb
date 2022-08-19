@@ -25,7 +25,7 @@ class Movie(models.Model):
     )
 
 
-class Player(models.Model):
+class People(models.Model):
     name = models.CharField(max_length=50)
     biography = models.TextField(blank=True)
 
@@ -39,15 +39,15 @@ class Player(models.Model):
         abstract = True
 
 
-class Director(Player):
+class Director(People):
     pass
 
 
-class Writer(Player):
+class Writer(People):
     pass
 
 
-class Actor(Player):
+class Actor(People):
     pass
 
 
