@@ -18,10 +18,14 @@ class Movie(models.Model):
 
     synopsys = models.TextField(blank=True)
 
-    directors = models.ManyToManyField("People", related_name="filmography")
-    writers = models.ManyToManyField("People", related_name="filmography")
+    directors = models.ManyToManyField(
+        "People", through="Credit", related_name="filmography"
+    )
+    writers = models.ManyToManyField(
+        "People", through="Credit", related_name="filmography"
+    )
     cast = models.ManyToManyField(
-        "People", through="Character", related_name="filmography"
+        "People", through="Credit", related_name="filmography"
     )
 
 
@@ -36,11 +40,16 @@ class People(models.Model):
     avatar = models.ImageField(blank=True, upload_to=avatar_upload_to)
 
 
-class Character(models.Model):
-    name = models.CharField(max_length=50, blank=True)
-    role = models.CharField()  # choices: Open API 스펙 보고 결정
+class Credit(models.Model):
+    DIRECTOR = ("director", "감독")
+    WRITER = ("writer", "극본")
+    ACTOR = ("actor", "배우")
+    JOB_CHOICES = [DIRECTOR, WRITER, ACTOR]
+    job = models.CharField(max_length=8, choices=JOB_CHOICES)
+
+    role_name = models.CharField(max_length=50, blank=True)  # for actors
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
-    actor = models.ForeignKey(People, on_delete=models.CASCADE)
+    people = models.ForeignKey(People, on_delete=models.CASCADE)
 
 
 class Country(models.Model):
