@@ -1,4 +1,5 @@
 from dataclasses import dataclass, fields
+from typing import Optional
 
 
 def flexible_dataclass(cls=None, /, **kwargs):
@@ -22,3 +23,25 @@ def flexible_dataclass(cls=None, /, **kwargs):
         return decorator
 
     return decorator(cls)
+
+
+def lazy_load(
+    method=None,
+    /,
+    variable_name: Optional[str] = None,
+):
+    def decorator(method):
+        inst_var = variable_name or f"_{method.__name__}"
+
+        def cached(instance, *args, **kwargs):
+            if not getattr(instance, inst_var, False):
+                val = method(instance, *args, **kwargs)
+                setattr(instance, inst_var, val)
+            return getattr(instance, inst_var)
+
+        return cached
+
+    if method is None:
+        return decorator
+    else:
+        return decorator(method)
