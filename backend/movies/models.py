@@ -18,15 +18,9 @@ class Movie(models.Model):
 
     synopsys = models.TextField(blank=True)
 
-    directors = models.ManyToManyField(
-        "People", through="Credit", related_name="filmography"
-    )
-    writers = models.ManyToManyField(
-        "People", through="Credit", related_name="filmography"
-    )
-    cast = models.ManyToManyField(
-        "People", through="Credit", related_name="filmography"
-    )
+    directors = models.ManyToManyField("People", through="Credit")
+    writers = models.ManyToManyField("People", through="Credit")
+    cast = models.ManyToManyField("People", through="Credit")
 
 
 class People(models.Model):
@@ -48,8 +42,10 @@ class Credit(models.Model):
     job = models.CharField(max_length=8, choices=JOB_CHOICES)
 
     role_name = models.CharField(max_length=50, blank=True)  # for actors
-    movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
-    people = models.ForeignKey(People, on_delete=models.CASCADE)
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="credits")
+    people = models.ForeignKey(
+        People, on_delete=models.CASCADE, related_name="filmography"
+    )
 
 
 class Country(models.Model):
