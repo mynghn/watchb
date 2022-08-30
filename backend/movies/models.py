@@ -21,7 +21,7 @@ class Movie(models.Model):
 
     synopsys = models.TextField(blank=True)
 
-    credits = models.ManyToManyField("People", through="Credit")
+    staffs = models.ManyToManyField("People", through="Credit")
 
 
 class People(models.Model):
