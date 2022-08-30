@@ -2,6 +2,9 @@ from django.db import models
 
 
 class Movie(models.Model):
+    tmdb_id = models.IntegerField(unique=True, null=True)
+    kmdb_id = models.CharField(max_length=7, unique=True, null=True)
+
     title = models.CharField(max_length=200)
     release_date = models.DateField()
     countries = models.ManyToManyField("Country")
@@ -24,6 +27,9 @@ class Movie(models.Model):
 
 
 class People(models.Model):
+    tmdb_id = models.IntegerField(unique=True, null=True)
+    kmdb_id = models.CharField(max_length=8, unique=True, null=True)
+
     name = models.CharField(max_length=50)
     biography = models.TextField(blank=True)
 
