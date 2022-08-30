@@ -79,7 +79,7 @@ class MovieImage(models.Model):
 
 
 class Poster(MovieImage):
-    pass
+    is_main = models.BooleanField()
 
 
 class Still(MovieImage):
