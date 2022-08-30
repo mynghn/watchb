@@ -62,7 +62,7 @@ class Country(models.Model):
 
 class Genre(models.Model):
     # from KMDb genre list
-    name = models.CharField(max_length=7)
+    name = models.CharField(max_length=7, unique=True)
 
 
 class MovieImage(models.Model):
