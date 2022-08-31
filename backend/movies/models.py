@@ -2,14 +2,15 @@ from django.db import models
 
 
 class Movie(models.Model):
-    tmdb_id = models.IntegerField(unique=True, null=True)
-    kmdb_id = models.CharField(max_length=7, unique=True, null=True)
+    tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
+    kmdb_id = models.CharField(max_length=7, unique=True, null=True, blank=True)
 
     title = models.CharField(max_length=200)
-    release_date = models.DateField()
-    countries = models.ManyToManyField("Country")
-    genres = models.ManyToManyField("Genre")
-    running_time = models.DurationField()
+    release_date = models.DateField(null=True, blank=True)
+    countries = models.ManyToManyField("Country", blank=True)
+    genres = models.ManyToManyField("Genre", blank=True)
+    running_time = models.DurationField(null=True, blank=True)
+    synopsys = models.TextField(blank=True)
 
     ALL_AGE = ("ALL", "전체관람가")
     OVER_12 = ("12", "12세이상관람가")
@@ -17,16 +18,16 @@ class Movie(models.Model):
     OVER_18 = ("18", "청소년관람불가")
     RESTRICTED = ("R18", "제한상영가")
     FILM_RATING_CHOICES = [ALL_AGE, OVER_12, OVER_15, OVER_18, RESTRICTED]
-    film_rating = models.CharField(max_length=3, choices=FILM_RATING_CHOICES)
-
-    synopsys = models.TextField(blank=True)
+    film_rating = models.CharField(
+        max_length=3, choices=FILM_RATING_CHOICES, blank=True
+    )
 
     staffs = models.ManyToManyField("People", through="Credit")
 
 
 class People(models.Model):
-    tmdb_id = models.IntegerField(unique=True, null=True)
-    kmdb_id = models.CharField(max_length=8, unique=True, null=True)
+    tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
+    kmdb_id = models.CharField(max_length=8, unique=True, null=True, blank=True)
 
     name = models.CharField(max_length=50)
     biography = models.TextField(blank=True)
