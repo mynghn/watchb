@@ -292,6 +292,14 @@ python-jose = ["python-jose (==3.3.0)"]
 test = ["cryptography", "pytest-cov", "pytest-django", "pytest-xdist", "pytest", "tox"]
 
 [[package]]
+name = "drf-writable-nested"
+version = "0.7.0"
+description = "Writable nested helpers for django-rest-framework's serializers"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
 name = "entrypoints"
 version = "0.4"
 description = "Discover and load entry points from installed packages."
@@ -1378,7 +1386,7 @@ notebook = ">=4.4.1"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "e50caae459619fb5efdca2d1d4fd8947987c6d1af7f93a9fb572cdf379f6db22"
+content-hash = "17f6208c68673b1d9d9c43dc26b0346b8b95d4b3849a51cf03fdb6c5986dfc4d"
 
 [metadata.files]
 appnope = [
@@ -1594,6 +1602,9 @@ djangorestframework = [
 djangorestframework-simplejwt = [
     {file = "djangorestframework_simplejwt-5.2.0-py3-none-any.whl", hash = "sha256:bcc4cb74dcb637ca1e17eed35276bd618ab19491f8c53e65dee6271177c355e8"},
     {file = "djangorestframework_simplejwt-5.2.0.tar.gz", hash = "sha256:a60b09afb27d91ad1d7ac904cc632bd52cecead8f389f0fa1532ceb0fb757a74"},
+]
+drf-writable-nested = [
+    {file = "drf_writable_nested-0.7.0-py3-none-any.whl", hash = "sha256:154c0381e8a3a477e0fd539d5e1caf8ff4c1097a9c0c0fe741d4858b11b0455b"},
 ]
 entrypoints = [
     {file = "entrypoints-0.4-py3-none-any.whl", hash = "sha256:f174b5ff827504fd3cd97cc3f8649f3693f51538c7e4bdf3ef002c8429d42f9f"},
