@@ -86,8 +86,21 @@ class Still(MovieImage):
 
 
 class Video(models.Model):
-    title = models.CharField(max_length=50)
+    title = models.CharField(max_length=50, null=True)
     video_url = models.URLField(max_length=200)
     thumbnail_url = models.URLField(max_length=200)
 
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["movie", "title"], name="unique_title_in_movie"
+            ),
+            models.UniqueConstraint(
+                fields=["movie", "video_url"], name="unique_video_url_in_movie"
+            ),
+            models.UniqueConstraint(
+                fields=["movie", "thumbnail_url"], name="unique_thumbnail_url_in_movie"
+            ),
+        ]
