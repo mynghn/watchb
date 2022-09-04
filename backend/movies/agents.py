@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlparse
 import requests
 
 from . import custom_types as T
-from .decorators import lazy_load
+from .decorators import lazy_load_property
 from .mixins.api import RequestPaginateMixin, SingletonRequestSessionMixin
 
 
@@ -153,8 +153,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
             **self.session.request(method, self.base_url + uri, params).json()
         )
 
-    @property
-    @lazy_load
+    @lazy_load_property
     def image_base_url(self) -> str:
         uri = "/configuration"
         IMG_CONFIGS_KEY = "images"

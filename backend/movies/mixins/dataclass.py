@@ -3,12 +3,11 @@ from dataclasses import Field, fields, is_dataclass
 from importlib import import_module
 from typing import Literal, NewType, Type, Union, get_args, get_origin, get_type_hints
 
-from ..decorators import lazy_load
+from ..decorators import lazy_load_property
 
 
 class TypeHintsMixin:
-    @property
-    @lazy_load
+    @lazy_load_property
     def type_hints(self) -> dict[str, Type]:
         try:
             return get_type_hints(self)

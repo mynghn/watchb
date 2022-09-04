@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import Callable, Optional
+from typing import Callable
 
 
 def flexible_dataclass(cls=None, /, **kwargs):
@@ -25,26 +25,16 @@ def flexible_dataclass(cls=None, /, **kwargs):
     return decorator(cls)
 
 
-def lazy_load(
-    method=None,
-    /,
-    variable_name: Optional[str] = None,
-):
-    def decorator(method):
-        inst_var = variable_name or f"_{method.__name__}"
+def lazy_load_property(method):
+    inst_var = f"_{method.__name__}"
 
-        def cached(instance, *args, **kwargs):
-            if not getattr(instance, inst_var, False):
-                val = method(instance, *args, **kwargs)
-                setattr(instance, inst_var, val)
-            return getattr(instance, inst_var)
+    def cached(instance, *args, **kwargs):
+        if not getattr(instance, inst_var, False):
+            val = method(instance, *args, **kwargs)
+            setattr(instance, inst_var, val)
+        return getattr(instance, inst_var)
 
-        return cached
-
-    if method is None:
-        return decorator
-    else:
-        return decorator(method)
+    return property(cached)
 
 
 def validate_fields(fields: list[str], validator: Callable):

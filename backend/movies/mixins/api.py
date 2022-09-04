@@ -2,14 +2,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
-from ..decorators import lazy_load
+from ..decorators import lazy_load_property
 
 
 class SingletonRequestSessionMixin:
     _session_name = "_session"
 
-    @property
-    @lazy_load
+    @lazy_load_property
     def session(self) -> requests.Session:
         return requests.Session()
 
