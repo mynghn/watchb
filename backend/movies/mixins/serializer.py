@@ -3,13 +3,12 @@ from typing import Any, Optional, Type
 
 from django.db.models import Field as ModelField
 from django.db.models import Model
-from drf_writable_nested.mixins import BaseNestedModelSerializer
 from rest_framework.serializers import Field as SerializerField
-from rest_framework.serializers import ModelSerializer, ValidationError
+from rest_framework.serializers import ValidationError
 from rest_framework.settings import api_settings
 
 
-class GetOrSaveMixin(ModelSerializer):
+class GetOrSaveMixin:
     def save(self, **kwargs) -> Model:
         return self.get_instance(**self.validated_data, **kwargs) or super().save(
             **kwargs
@@ -34,7 +33,7 @@ class GetOrSaveMixin(ModelSerializer):
             return
 
 
-class NestedThroughModelMixin(BaseNestedModelSerializer):
+class NestedThroughModelMixin:
     def update_or_create_through_instance(
         self,
         instance: Model,
