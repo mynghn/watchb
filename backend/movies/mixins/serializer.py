@@ -1,11 +1,12 @@
 from collections import OrderedDict
-from typing import Optional, Type
+from typing import Any, Optional, Type
 
 from django.db.models import Field as ModelField
 from django.db.models import Model
 from drf_writable_nested.mixins import BaseNestedModelSerializer
 from rest_framework.serializers import Field as SerializerField
 from rest_framework.serializers import ModelSerializer, ValidationError
+from rest_framework.settings import api_settings
 
 
 class GetOrSaveMixin(ModelSerializer):
@@ -118,3 +119,20 @@ class NestedThroughModelMixin(BaseNestedModelSerializer):
                     field_source,
                 )
         super().update_or_create_reverse_relations(instance, other_reverse_relations)
+
+
+class IDsFromAPIValidateMixin:
+    api_id_fields: set[str]
+
+    def validate(self, attrs: dict[str, Any]):
+        # API id check
+        if not self.api_id_fields & set(attrs.keys()):
+            raise ValidationError(
+                {
+                    api_settings.NON_FIELD_ERRORS_KEY: [
+                        f"At least one of {self.api_id_fields} should be provided"
+                    ]
+                },
+                code="required",
+            )
+        return super().validate(attrs)
