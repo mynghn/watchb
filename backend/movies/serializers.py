@@ -18,11 +18,7 @@ from rest_framework.validators import UniqueValidator
 
 from movies.decorators import validate_fields
 
-from .mixins.serializer import (
-    GetOrSaveMixin,
-    IDsFromAPIValidateMixin,
-    NestedThroughModelMixin,
-)
+from .mixins.serializer import GetOrSaveMixin, IDsFromAPIValidateMixin
 from .models import Country, Credit, Genre, Movie, People, Poster, Still, Video
 from .validators import CountryCodeValidator, OnlyKoreanValidator, validate_kmdb_text
 
@@ -136,8 +132,12 @@ class CreditSerializer(WritableNestedModelSerializer):
         fields = "__all__"
 
 
+class CreditFromAPISerializer(CreditSerializer):
+    people = PeopleFromAPISerializer()
+
+
 @validate_fields(fields=["title"], validator=validate_kmdb_text)
-class MovieRegisterSerializer(NestedThroughModelMixin, WritableNestedModelSerializer):
+class MovieRegisterSerializer(WritableNestedModelSerializer):
     kmdb_id = CharField(
         allow_null=True,
         max_length=8,
@@ -162,7 +162,7 @@ class MovieRegisterSerializer(NestedThroughModelMixin, WritableNestedModelSerial
     # m-to-m
     countries = CountryGetOrRegisterSerializer(many=True, required=False)
     genres = GenreGetOrRegisterSerializer(many=True, required=False)
-    staffs = CreditSerializer(many=True)  # w/ through model
+    credits = CreditFromAPISerializer(many=True)  # w/ through model
     # 1-to-m
     poster_set = PosterSerializer(many=True, required=False)
     still_set = StillSerializer(many=True, required=False)
