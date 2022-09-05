@@ -3,7 +3,12 @@ from __future__ import annotations
 import datetime
 
 from dateutil.relativedelta import relativedelta
-from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
+from django.core.validators import (
+    MaxValueValidator,
+    MinLengthValidator,
+    MinValueValidator,
+    RegexValidator,
+)
 from drf_writable_nested.serializers import WritableNestedModelSerializer
 from rest_framework.serializers import (
     CharField,
@@ -12,7 +17,7 @@ from rest_framework.serializers import (
     IntegerField,
     ModelSerializer,
     PrimaryKeyRelatedField,
-    URLField,
+    ValidationError,
 )
 from rest_framework.validators import UniqueValidator
 
@@ -69,19 +74,9 @@ class StillSerializer(ModelSerializer):
 
 class VideoSerializer(ModelSerializer):
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
-    video_url = URLField(
-        max_length=200,
-        validators=[
-            UniqueValidator(queryset=Video.objects.all()),
-            RegexValidator(regex=r"^https:\/\/www\.youtube\.com\/watch\?v=\w+$"),
-        ],
-    )
-    thumbnail_url = URLField(
-        max_length=200,
-        validators=[
-            UniqueValidator(queryset=Video.objects.all()),
-            RegexValidator(regex=r"^https:\/\/img\.youtube\.com\/vi\/\w+?\/\d\.jpg$"),
-        ],
+    youtube_id = CharField(
+        max_length=11,
+        validators=[MinLengthValidator(11)],
     )
 
     class Meta:
@@ -174,6 +169,27 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
     class Meta:
         model = Movie
         fields = "__all__"
+
+    def validate_video_set(self, value: list[dict[str, str]]) -> list[dict[str, str]]:
+        title_set = set()
+        youtube_id_set = set()
+        for video in value:
+            if v_title := video.get("titlie"):
+                if v_title not in title_set:
+                    title_set.add(v_title)
+                else:
+                    raise ValidationError(
+                        f"redundant video title in a movie: {v_title}", code="unique"
+                    )
+            if (v_youtube_id := video["youtube_id"]) not in youtube_id_set:
+                youtube_id_set.add(v_youtube_id)
+            else:
+                raise ValidationError(
+                    f"redundant video youtube_id in a  movie: {v_youtube_id}",
+                    code="unique",
+                )
+
+        return value
 
 
 class MovieFromAPISerializer(IDsFromAPIValidateMixin, MovieRegisterSerializer):
