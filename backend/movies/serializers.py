@@ -53,7 +53,7 @@ class CountryGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
         fields = "__all__"
 
     def validate_alpha_2(self, value: str) -> str:
-        return value.capitalize()
+        return value.upper()
 
 
 class PosterSerializer(ModelSerializer):
