@@ -65,11 +65,7 @@ class Genre(models.Model):
 
 
 class MovieImage(models.Model):
-    def image_upload_to(self, filename):
-        modelname = self.__class__.__name__.lower()
-        return f"movies/{self.movie_id}/{modelname}s/{filename}"
-
-    image = models.ImageField(upload_to=image_upload_to)
+    image_url = models.URLField()
 
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
 
@@ -80,9 +76,21 @@ class MovieImage(models.Model):
 class Poster(MovieImage):
     is_main = models.BooleanField()
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["movie", "image_url"], name="unique_poster_in_movie"
+            )
+        ]
+
 
 class Still(MovieImage):
-    pass
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["movie", "image_url"], name="unique_still_in_movie"
+            )
+        ]
 
 
 class Video(models.Model):

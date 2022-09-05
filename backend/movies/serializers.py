@@ -170,6 +170,41 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
         model = Movie
         fields = "__all__"
 
+    def validate_poster_set(self, value: list[dict[str, str]]) -> list[dict[str, str]]:
+        main_cnt = 0
+        image_url_set = set()
+        for poster in value:
+            if poster["is_main"]:
+                if main_cnt == 0:
+                    main_cnt += 1
+                else:
+                    raise ValidationError(
+                        "more than one main poster in a movie", code="unique"
+                    )
+
+            if (p_image_url := poster["image_url"]) not in image_url_set:
+                image_url_set.add(p_image_url)
+            else:
+                raise ValidationError(
+                    f"redundant poster image_url in a movie: {p_image_url}",
+                    code="unique",
+                )
+
+        return value
+
+    def validate_still_set(self, value: list[dict[str, str]]) -> list[dict[str, str]]:
+        image_url_set = set()
+        for still in value:
+            if (s_image_url := still["image_url"]) not in image_url_set:
+                image_url_set.add(s_image_url)
+            else:
+                raise ValidationError(
+                    f"redundant still image_url in a movie: {s_image_url}",
+                    code="unique",
+                )
+
+        return value
+
     def validate_video_set(self, value: list[dict[str, str]]) -> list[dict[str, str]]:
         title_set = set()
         youtube_id_set = set()
@@ -185,7 +220,7 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
                 youtube_id_set.add(v_youtube_id)
             else:
                 raise ValidationError(
-                    f"redundant video youtube_id in a  movie: {v_youtube_id}",
+                    f"redundant video youtube_id in a movie: {v_youtube_id}",
                     code="unique",
                 )
 
