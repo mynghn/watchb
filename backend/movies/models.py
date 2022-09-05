@@ -31,12 +31,7 @@ class People(models.Model):
 
     name = models.CharField(max_length=50)
     biography = models.TextField(blank=True)
-
-    def avatar_upload_to(self, filename):
-        modelname = self.__class__.__name__.lower()
-        return f"{modelname}/{self.id}/avatar/{filename}"
-
-    avatar = models.ImageField(blank=True, upload_to=avatar_upload_to)
+    avatar_url = models.URLField(blank=True, unique=True)
 
 
 class Credit(models.Model):
