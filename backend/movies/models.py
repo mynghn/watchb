@@ -31,7 +31,7 @@ class People(models.Model):
 
     name = models.CharField(max_length=50)
     biography = models.TextField(blank=True)
-    avatar_url = models.URLField(blank=True, unique=True)
+    avatar_url = models.URLField(blank=True, null=True, unique=True)
 
 
 class Credit(models.Model):
