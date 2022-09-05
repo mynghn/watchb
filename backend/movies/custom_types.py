@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import field
 from typing import Optional
 
@@ -153,3 +151,6 @@ class MovieFromKMDb(NestedInitMixin, EmptyStringToNoneMixin):
     rating: Optional[str] = None
     posters: Optional[str] = None
     stills: Optional[str] = None
+
+
+MovieFromAPI = MovieFromTMDB | MovieFromKMDb
