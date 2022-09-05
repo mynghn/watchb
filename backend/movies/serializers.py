@@ -142,7 +142,10 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
         allow_null=True,
         max_length=8,
         required=False,
-        validators=[RegexValidator(regex=r"^[A-Z]\/[0-9]{5}$")],
+        validators=[
+            RegexValidator(regex=r"^[A-Z]\/[0-9]{5}$"),
+            UniqueValidator(queryset=Movie.objects.all()),
+        ],
     )
     title = CharField(max_length=200, trim_whitespace=True)
     synopsys = CharField(allow_blank=True, required=False, trim_whitespace=True)
