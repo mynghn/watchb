@@ -99,11 +99,9 @@ class PeopleGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
         validators=[OnlyKoreanValidator(allowed=r" (!HS|!HE) |[ -]")],
     )
 
-    fields_to_clean = ["name"]
-
     class Meta:
         model = People
-        fields = "__all__"
+        exclude = ["id"]
 
 
 class PeopleFromAPISerializer(IDsFromAPIValidateMixin, PeopleGetOrRegisterSerializer):

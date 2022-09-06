@@ -6,8 +6,6 @@ from ..decorators import lazy_load_property
 
 
 class SingletonRequestSessionMixin:
-    _session_name = "_session"
-
     @lazy_load_property
     def session(self) -> requests.Session:
         return requests.Session()
