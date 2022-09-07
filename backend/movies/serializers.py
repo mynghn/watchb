@@ -17,6 +17,7 @@ from rest_framework.serializers import (
     IntegerField,
     ModelSerializer,
     PrimaryKeyRelatedField,
+    URLField,
     ValidationError,
 )
 from rest_framework.validators import UniqueValidator
@@ -27,11 +28,13 @@ from .mixins.serializer import GetOrSaveMixin, IDsFromAPIValidateMixin
 from .models import Country, Credit, Genre, Movie, People, Poster, Still, Video
 from .validators import CountryCodeValidator, OnlyKoreanValidator, validate_kmdb_text
 
+genre_validators = {"name": [OnlyKoreanValidator(allowed=r"[/() ]")]}
+
 
 class GenreGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
     name = CharField(
         max_length=7,
-        validators=[OnlyKoreanValidator(allowed=r"[/() ]")],
+        validators=genre_validators["name"],
     )
 
     class Meta:
@@ -39,13 +42,17 @@ class GenreGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
         fields = "__all__"
 
 
+country_validators = {
+    "alpha_2": [CountryCodeValidator(code_type="alpha_2")],
+    "name": [OnlyKoreanValidator(allowed=r"[ ]")],
+}
+
+
 class CountryGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
-    alpha_2 = CharField(
-        max_length=2, validators=[CountryCodeValidator(code_type="alpha_2")]
-    )
+    alpha_2 = CharField(max_length=2, validators=country_validators["alpha_2"])
     name = CharField(
         max_length=50,
-        validators=[OnlyKoreanValidator(allowed=r"[ ]")],
+        validators=country_validators["name"],
     )
 
     class Meta:
@@ -72,11 +79,14 @@ class StillSerializer(ModelSerializer):
         fields = "__all__"
 
 
+video_validators = {"youtube_id": [MinLengthValidator(11)]}
+
+
 class VideoSerializer(ModelSerializer):
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
     youtube_id = CharField(
         max_length=11,
-        validators=[MinLengthValidator(11)],
+        validators=video_validators["youtube_id"],
     )
 
     class Meta:
@@ -84,19 +94,29 @@ class VideoSerializer(ModelSerializer):
         fields = "__all__"
 
 
+people_validators = {
+    "kmdb_id": [RegexValidator(regex=r"^[0-9]{8}$")],
+    "name": [OnlyKoreanValidator(allowed=r"!HS|!HE|[ -]|\s[A-Z][.]\s")],
+}
+
+
 @validate_fields(fields=["name"], validator=validate_kmdb_text)
-class PeopleGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
+class PeopleSerializer(GetOrSaveMixin, ModelSerializer):
     tmdb_id = IntegerField(allow_null=True, required=False)
     kmdb_id = CharField(
         allow_null=True,
+        allow_blank=True,
         max_length=8,
         required=False,
-        validators=[RegexValidator(regex=r"^[0-9]{8}$")],
+        validators=people_validators["kmdb_id"],
     )
     name = CharField(
         max_length=50,
         trim_whitespace=True,
-        validators=[OnlyKoreanValidator(allowed=r" (!HS|!HE) |[ -]")],
+        validators=people_validators["name"],
+    )
+    avatar_url = URLField(
+        allow_blank=True, allow_null=True, max_length=200, required=False
     )
 
     class Meta:
@@ -104,20 +124,23 @@ class PeopleGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
         exclude = ["id"]
 
 
-class PeopleFromAPISerializer(IDsFromAPIValidateMixin, PeopleGetOrRegisterSerializer):
+class PeopleFromAPISerializer(IDsFromAPIValidateMixin, PeopleSerializer):
     api_id_fields = {"tmdb_id", "kmdb_id"}
+
+
+credit_validators = {"role_name": [OnlyKoreanValidator(allowed=r"!HS|!HE|[ /-]")]}
 
 
 @validate_fields(fields=["role_name"], validator=validate_kmdb_text)
 class CreditSerializer(WritableNestedModelSerializer):
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
-    people = PeopleGetOrRegisterSerializer()
+    people = PeopleSerializer()
     role_name = CharField(
         max_length=50,
         required=False,
         allow_blank=True,
         trim_whitespace=True,
-        validators=[OnlyKoreanValidator(allowed=r" (!HS|!HE) |[ /]")],
+        validators=credit_validators["role_name"],
     )
 
     class Meta:
@@ -129,10 +152,24 @@ class CreditFromAPISerializer(CreditSerializer):
     people = PeopleFromAPISerializer()
 
 
+movie_validators = {
+    "kmdb_id": [
+        RegexValidator(regex=r"^[A-Z]\/[0-9]{5}$"),
+        UniqueValidator(queryset=Movie.objects.all()),
+    ],
+    "release_date": [
+        MinValueValidator(datetime.date(1895, 3, 22)),
+        MaxValueValidator(lambda: datetime.date.today() + relativedelta(years=5)),
+    ],
+    "running_time": [MinValueValidator(datetime.timedelta())],
+}
+
+
 @validate_fields(fields=["title"], validator=validate_kmdb_text)
 class MovieRegisterSerializer(WritableNestedModelSerializer):
     kmdb_id = CharField(
         allow_null=True,
+        allow_blank=True,
         max_length=8,
         required=False,
         validators=[
