@@ -8,10 +8,11 @@ from rest_framework.serializers import ValidationError
 
 class OnlyKoreanValidator(RegexValidator):
     def __init__(self, allowed: str | re.Pattern = []):
-        super(OnlyKoreanValidator, self).__init__(regex=r"^[가-힣]*$", code="only-korean")
+        super(OnlyKoreanValidator, self).__init__(regex=r"^[가-힣]+$", code="only-korean")
         self.allowed = allowed
 
     def __call__(self, value: str):
+        self._value = value
         super(OnlyKoreanValidator, self).__call__(self.preprocess(value))
 
     def preprocess(self, value: str) -> str:
@@ -19,7 +20,7 @@ class OnlyKoreanValidator(RegexValidator):
 
     @property
     def message(self):
-        return f"Only Korean and '{self.allowed}' pattern allowed"
+        return f"Only Korean and '{self.allowed}' pattern allowed but {self._value} encountered."
 
 
 class CountryCodeValidator:
@@ -35,6 +36,6 @@ class CountryCodeValidator:
 
 
 def validate_kmdb_text(text: str) -> str:
-    cleansed = re.sub(r"\s(!HS|!HE)\s", "", text)  # invalid characters from KMDb
+    cleansed = re.sub(r"!HS|!HE", "", text)  # invalid characters from KMDb
     cleansed = re.sub(r"\s+", " ", cleansed)
-    return cleansed
+    return cleansed.strip()
