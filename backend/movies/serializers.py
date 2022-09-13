@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from typing import Optional
 
 from dateutil.relativedelta import relativedelta
 from django.core.validators import (
@@ -20,9 +21,11 @@ from rest_framework.serializers import (
     URLField,
     ValidationError,
 )
+from rest_framework.settings import api_settings
 from rest_framework.validators import UniqueValidator
 
-from movies.decorators import validate_fields
+from movies.decorators import lazy_load_property, validate_fields
+from movies.utils import ISO_3166_1
 
 from .mixins.serializer import GetOrSaveMixin, IDsFromAPIValidateMixin
 from .models import Country, Credit, Genre, Movie, People, Poster, Still, Video
@@ -49,7 +52,9 @@ class CountryGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
     }
 
     alpha_2 = CharField(
-        max_length=2, validators=[custom_validators["alpha_2"]["country_code"]]
+        max_length=2,
+        required=False,
+        validators=[custom_validators["alpha_2"]["country_code"]],
     )
     name = CharField(
         max_length=50,
@@ -60,8 +65,56 @@ class CountryGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
         model = Country
         fields = "__all__"
 
+    _name_map = {"대한민국": "한국"}
+
+    @lazy_load_property
+    def reverse_name_map(self) -> dict[str, str]:
+        return {v: k for k, v in self._name_map.items()}
+
     def validate_alpha_2(self, value: str) -> str:
-        return value.upper()
+        if not value:
+            return value
+        elif ISO_3166_1.get_country(value):
+            return value.upper()
+        else:
+            raise ValidationError(
+                f"'{value}' is not a valid ISO 3166-1 alpha-2 country code.",
+                code="invalid",
+            )
+
+    def validate_name(self, value: str) -> str:
+        if not value:
+            return value
+        elif value in self._name_map.values() or ISO_3166_1.get_country(value):
+            return self._name_map.get(value, value)
+        else:
+            raise ValidationError(
+                f"'{value}' is not a valid ISO 3166-1 country name.",
+                code="invalid",
+            )
+
+    def validate(self, attrs: dict[str, Optional[str]]) -> dict[str, str]:
+        if not attrs["alpha_2"] and not attrs["name"]:
+            raise ValidationError(
+                {
+                    api_settings.NON_FIELD_ERRORS_KEY: [
+                        "At least one of 'alpha_2' or 'name' field is required."
+                    ]
+                },
+                code="required",
+            )
+        elif not attrs["name"]:
+            attrs["name"] = self._name_map.get(
+                iso_name := ISO_3166_1.get_country(attrs["alpha_2"])[
+                    ISO_3166_1.name_key
+                ],
+                iso_name,
+            )
+        elif not attrs["alpha_2"]:
+            attrs["alpha2"] = ISO_3166_1.get_country(
+                self.reverse_name_map.get(attrs["name"], attrs["name"])
+            )[ISO_3166_1.alpha2_key]
+        return super().validate(attrs)
 
 
 class PosterSerializer(ModelSerializer):
