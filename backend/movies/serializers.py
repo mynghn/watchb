@@ -147,24 +147,26 @@ class VideoSerializer(ModelSerializer):
         fields = "__all__"
 
 
-@validate_fields(fields=["name"], validator=validate_kmdb_text)
-class PeopleSerializer(GetOrSaveMixin, ModelSerializer):
+class PeopleGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
     custom_validators = {
         "kmdb_id": {"fmt": RegexValidator(regex=r"^[0-9]{8}$")},
         "name": {"ko": OnlyKoreanValidator(allowed=r"\s[A-Z][.]\s|[- ]")},
         "en_name": {"en": RegexValidator(regex=r"[A-Za-zÀ-ÿ.- ]")},
     }
 
+    id = IntegerField(label="ID", required=False)
     tmdb_id = IntegerField(allow_null=True, required=False)
     kmdb_id = CharField(
-        allow_null=True,
-        allow_blank=True,
         max_length=8,
         required=False,
+        allow_null=True,
+        allow_blank=True,
+        trim_whitespace=True,
         validators=[custom_validators["kmdb_id"]["fmt"]],
     )
     name = CharField(
         max_length=50,
+        allow_blank=True,
         trim_whitespace=True,
         validators=[custom_validators["name"]["ko"]],
     )
@@ -181,19 +183,55 @@ class PeopleSerializer(GetOrSaveMixin, ModelSerializer):
 
     class Meta:
         model = People
+        fields = "__all__"
+
+    def validate(self, attrs: dict[str, str | int]) -> dict[str, str | int]:
+        if not attrs["name"] and not attrs["en_name"]:
+            raise ValidationError(
+                {
+                    api_settings.NON_FIELD_ERRORS_KEY: [
+                        "At least one of 'name' or 'en_name' field is required."
+                    ]
+                },
+                code="required",
+            )
+        return super().validate(attrs)
+
+
+@validate_fields(fields=["name", "en_name"], validator=validate_kmdb_text)
+class PeopleFromAPISerializer(IDsFromAPIValidateMixin, PeopleGetOrRegisterSerializer):
+    api_id_fields = {"tmdb_id", "kmdb_id"}
+
+    custom_validators = {
+        "name": {"ko": OnlyKoreanValidator(allowed=r"[-]|\s[A-Z][.]\s|\s||!HS|!HE")},
+        "en_name": {"en": RegexValidator(regex=r"[A-Za-zÀ-ÿ.-]|\s|!HS|!HE")},
+    }
+
+    id = None
+    name = CharField(
+        max_length=50,
+        required=False,
+        trim_whitespace=True,
+        validators=[custom_validators["name"]["ko"]],
+    )
+    en_name = CharField(
+        max_length=50,
+        required=False,
+        allow_blank=True,
+        trim_whitespace=True,
+        validators=[custom_validators["en_name"]["en"]],
+    )
+
+    class Meta(PeopleGetOrRegisterSerializer.Meta):
+        fields = None
         exclude = ["id"]
 
 
-class PeopleFromAPISerializer(IDsFromAPIValidateMixin, PeopleSerializer):
-    api_id_fields = {"tmdb_id", "kmdb_id"}
-
-
-@validate_fields(fields=["role_name"], validator=validate_kmdb_text)
 class CreditSerializer(WritableNestedModelSerializer):
     custom_validators = {"role_name": {"ko": OnlyKoreanValidator(allowed=r"[/- ]")}}
 
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
-    people = PeopleSerializer()
+    people = PeopleGetOrRegisterSerializer()
     role_name = CharField(
         max_length=50,
         required=False,
@@ -207,11 +245,22 @@ class CreditSerializer(WritableNestedModelSerializer):
         fields = "__all__"
 
 
+@validate_fields(fields=["role_name"], validator=validate_kmdb_text)
 class CreditFromAPISerializer(CreditSerializer):
+    custom_validators = {
+        "role_name": {"ko": OnlyKoreanValidator(allowed=r"[/-]|\s|!HS|!HE")}
+    }
+
     people = PeopleFromAPISerializer()
+    role_name = CharField(
+        max_length=50,
+        required=False,
+        allow_blank=True,
+        trim_whitespace=True,
+        validators=[custom_validators["role_name"]["ko"]],
+    )
 
 
-@validate_fields(fields=["title"], validator=validate_kmdb_text)
 class MovieRegisterSerializer(WritableNestedModelSerializer):
     custom_validators = {
         "kmdb_id": {
@@ -327,5 +376,6 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
         return value
 
 
+@validate_fields(fields=["title"], validator=validate_kmdb_text)
 class MovieFromAPISerializer(IDsFromAPIValidateMixin, MovieRegisterSerializer):
     api_id_fields = {"tmdb_id", "kmdb_id"}
