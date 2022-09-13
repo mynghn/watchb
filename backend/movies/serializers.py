@@ -84,7 +84,7 @@ class VideoSerializer(ModelSerializer):
     custom_validators = {"external_id": {"min_length": MinLengthValidator(11)}}
 
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
-    youtube_id = CharField(
+    external_id = CharField(
         max_length=11,
         validators=[custom_validators["external_id"]["min_length"]],
     )
@@ -99,6 +99,7 @@ class PeopleSerializer(GetOrSaveMixin, ModelSerializer):
     custom_validators = {
         "kmdb_id": {"fmt": RegexValidator(regex=r"^[0-9]{8}$")},
         "name": {"ko": OnlyKoreanValidator(allowed=r"\s[A-Z][.]\s|[- ]")},
+        "en_name": {"en": RegexValidator(regex=r"[A-Za-zÀ-ÿ.- ]")},
     }
 
     tmdb_id = IntegerField(allow_null=True, required=False)
@@ -113,6 +114,13 @@ class PeopleSerializer(GetOrSaveMixin, ModelSerializer):
         max_length=50,
         trim_whitespace=True,
         validators=[custom_validators["name"]["ko"]],
+    )
+    en_name = CharField(
+        max_length=50,
+        required=False,
+        allow_blank=True,
+        trim_whitespace=True,
+        validators=[custom_validators["en_name"]["en"]],
     )
     avatar_url = URLField(
         allow_blank=True, allow_null=True, max_length=200, required=False
@@ -163,6 +171,10 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
                 lambda: datetime.date.today() + relativedelta(years=5)
             ),
         },
+        "production_year": {
+            "min_value": MinValueValidator(1850),
+            "max_value": MaxValueValidator(lambda: datetime.date.today().year + 3),
+        },
         "running_time": {"min_value": MinValueValidator(datetime.timedelta())},
     }
 
@@ -179,6 +191,11 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
         allow_null=True,
         required=False,
         validators=list(custom_validators["release_date"].values()),
+    )
+    production_year = IntegerField(
+        required=False,
+        allow_null=True,
+        validators=list(custom_validators["production_year"].values()),
     )
     running_time = DurationField(
         allow_null=True,
@@ -235,7 +252,7 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
 
     def validate_video_set(self, value: list[dict[str, str]]) -> list[dict[str, str]]:
         title_set = set()
-        youtube_id_set = set()
+        site_and_external_id_set = set()
         for video in value:
             if v_title := video.get("titlie"):
                 if v_title not in title_set:
@@ -244,11 +261,13 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
                     raise ValidationError(
                         f"redundant video title in a movie: {v_title}", code="unique"
                     )
-            if (v_youtube_id := video["youtube_id"]) not in youtube_id_set:
-                youtube_id_set.add(v_youtube_id)
+            if (
+                v_identifier := (video["site"], video["external_id"])
+            ) not in site_and_external_id_set:
+                site_and_external_id_set.add(v_identifier)
             else:
                 raise ValidationError(
-                    f"redundant video youtube_id in a movie: {v_youtube_id}",
+                    f"redundant video in a movie: {v_identifier}",
                     code="unique",
                 )
 
