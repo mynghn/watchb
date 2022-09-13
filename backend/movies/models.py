@@ -7,6 +7,7 @@ class Movie(models.Model):
 
     title = models.CharField(max_length=200)
     release_date = models.DateField(null=True, blank=True)
+    production_year = models.IntegerField(null=True, blank=True)
     countries = models.ManyToManyField("Country", blank=True)
     genres = models.ManyToManyField("Genre", blank=True)
     running_time = models.DurationField(null=True, blank=True)
@@ -29,7 +30,8 @@ class People(models.Model):
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     kmdb_id = models.CharField(max_length=8, unique=True, null=True, blank=True)
 
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, blank=True)
+    en_name = models.CharField(max_length=50, blank=True)
     biography = models.TextField(blank=True)
     avatar_url = models.URLField(blank=True, null=True, unique=True)
 
@@ -40,18 +42,23 @@ class Credit(models.Model):
     ACTOR = ("actor", "배우")
     JOB_CHOICES = [DIRECTOR, WRITER, ACTOR]
     job = models.CharField(max_length=8, choices=JOB_CHOICES)
-
-    role_name = models.CharField(max_length=50, blank=True)  # for actors
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="credits")
     people = models.ForeignKey(
         People, on_delete=models.CASCADE, related_name="filmography"
     )
 
+    # for actors
+    SPECIAL = ("special", "특별출연")
+    FRIEND = ("friend", "우정출연")
+    CAMEO_CHOICES = [SPECIAL, WRITER, FRIEND]
+    cameo_type = models.CharField(max_length=7, choices=CAMEO_CHOICES, blank=True)
+    role_name = models.CharField(max_length=50, blank=True)
+
 
 class Country(models.Model):
     # follows ISO 3166-1
     alpha_2 = models.CharField(max_length=2, primary_key=True)
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, unique=True)
 
 
 class Genre(models.Model):
@@ -90,7 +97,10 @@ class Still(MovieImage):
 
 class Video(models.Model):
     title = models.CharField(max_length=50, null=True)
-    youtube_id = models.CharField(max_length=11)
+
+    VIDEO_SITE_CHOICES = [("youtube", "YouTube")]
+    site = models.CharField(max_length=7, choices=VIDEO_SITE_CHOICES)
+    external_id = models.CharField(max_length=11)
 
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
 
@@ -100,6 +110,6 @@ class Video(models.Model):
                 fields=["movie", "title"], name="unique_title_in_movie"
             ),
             models.UniqueConstraint(
-                fields=["movie", "youtube_id"], name="unique_video_in_movie"
+                fields=["movie", "site", "external_id"], name="unique_video_in_movie"
             ),
         ]
