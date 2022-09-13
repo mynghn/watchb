@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from collections import defaultdict
 from typing import Optional
 
 from dateutil.relativedelta import relativedelta
@@ -11,6 +12,7 @@ from django.core.validators import (
     RegexValidator,
 )
 from drf_writable_nested.serializers import WritableNestedModelSerializer
+from rest_framework import ISO_8601
 from rest_framework.serializers import (
     CharField,
     DateField,
@@ -281,10 +283,11 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
     }
 
     kmdb_id = CharField(
-        allow_null=True,
-        allow_blank=True,
         max_length=8,
         required=False,
+        allow_null=True,
+        allow_blank=True,
+        trim_whitespace=True,
         validators=list(custom_validators["kmdb_id"].values()),
     )
     title = CharField(max_length=200, trim_whitespace=True)
@@ -307,7 +310,7 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
     # m-to-m
     countries = CountryGetOrRegisterSerializer(many=True, required=False)
     genres = GenreGetOrRegisterSerializer(many=True, required=False)
-    credits = CreditFromAPISerializer(many=True)  # w/ through model
+    credits = CreditSerializer(many=True)  # w/ through model
     # 1-to-m
     poster_set = PosterSerializer(many=True, required=False)
     still_set = StillSerializer(many=True, required=False)
@@ -376,6 +379,49 @@ class MovieRegisterSerializer(WritableNestedModelSerializer):
         return value
 
 
-@validate_fields(fields=["title"], validator=validate_kmdb_text)
+@validate_fields(fields=["title", "synopsys"], validator=validate_kmdb_text)
 class MovieFromAPISerializer(IDsFromAPIValidateMixin, MovieRegisterSerializer):
     api_id_fields = {"tmdb_id", "kmdb_id"}
+
+    release_date = DateField(
+        input_formats=["%Y-%m-%dT%H:%M:%S.%fZ", "%Y%m%d", ISO_8601],
+        allow_null=True,
+        required=False,
+        validators=list(
+            MovieRegisterSerializer.custom_validators["release_date"].values()
+        ),
+    )
+    credits = CreditFromAPISerializer(many=True)
+
+    def validate_credits(
+        self, value: list[dict[str, str | dict[str, str | int]]]
+    ) -> list[dict[str, str | dict[str, str | int]]]:
+        credits_by_job = defaultdict(list)
+        for c in value:
+            credits_by_job[c["job"]].append(c)
+
+        for job, credits in credits_by_job.items():
+            if job == "actor":
+                roles_by_actor = defaultdict(list)
+                for c in credits:
+                    roles_by_actor[
+                        c["people"].get("tmdb_id") or c["people"].get("kmdb_id")
+                    ].append(c["role_name"])
+                if any(
+                    len(roles) > 1
+                    and (any(not r for r in roles) or len(set(roles)) != len(roles))
+                    for roles in roles_by_actor.values()
+                ):
+                    raise ValidationError(
+                        f"same credit among cast: {credits}", code="unique"
+                    )
+            elif len(
+                set(
+                    c["people"].get("tmdb_id") or c["people"].get("kmdb_id")
+                    for c in credits
+                )
+            ) != len(credits):
+                raise ValidationError(
+                    f"same person among {job}s: {credits}", code="unique"
+                )
+        return value
