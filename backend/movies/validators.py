@@ -20,7 +20,7 @@ class OnlyKoreanValidator(RegexValidator):
 
     @property
     def message(self):
-        return f"Only Korean and '{self.allowed}' pattern allowed but {self._value} encountered."
+        return f"Only Korean and '{self.allowed}' pattern allowed but '{self._value}' encountered."
 
 
 class CountryCodeValidator:
