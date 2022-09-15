@@ -5,7 +5,7 @@ import re
 from collections import defaultdict
 from typing import Any, DefaultDict, Iterable, Literal, Optional, Type
 
-from ..agents import KMDbAPIAgent, TMDBAPIAgent
+from ..crawlers.agents import KMDbAPIAgent, TMDBAPIAgent
 from ..crawlers.interface import APICrawler, ListAndDetailCrawler
 from ..custom_types import (
     EnglishName,

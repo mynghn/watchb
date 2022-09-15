@@ -6,9 +6,9 @@ from urllib.parse import parse_qs, urlparse
 
 import requests
 
-from . import custom_types as T
-from .decorators import lazy_load_property
-from .mixins.api import RequestPaginateMixin, SingletonRequestSessionMixin
+from .. import custom_types as T
+from ..decorators import lazy_load_property
+from ..mixins.api import RequestPaginateMixin, SingletonRequestSessionMixin
 
 
 class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
