@@ -96,7 +96,7 @@ class Still(MovieImage):
 
 
 class Video(models.Model):
-    title = models.CharField(max_length=50, null=True)
+    title = models.CharField(max_length=200, null=True)
 
     VIDEO_SITE_CHOICES = [("youtube", "YouTube")]
     site = models.CharField(max_length=7, choices=VIDEO_SITE_CHOICES)
