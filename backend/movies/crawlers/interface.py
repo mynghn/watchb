@@ -5,7 +5,7 @@ from typing import Any, Type
 
 from rest_framework.serializers import ModelSerializer
 
-from ..custom_types import MovieFromAPI
+from ..custom_types import MovieFromAPI, SimpleMovieFromTMDB
 from ..models import Movie
 from ..serializers import MovieFromAPISerializer
 
@@ -45,3 +45,16 @@ class APICrawler(metaclass=ABCMeta):
             self.register(self.serialize(fetched))
             for fetched in self.fetch(*args, **kwargs)
         ]
+
+
+class ListAndDetailCrawler(APICrawler):
+    @abstractmethod
+    def list(self, *args, **kwargs) -> list[SimpleMovieFromTMDB]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def detail(self, movie: SimpleMovieFromTMDB) -> MovieFromAPI:
+        raise NotImplementedError
+
+    def fetch(self, *args, **kwargs) -> list[MovieFromAPI]:
+        return [self.detail(m) for m in self.list(*args, **kwargs)]
