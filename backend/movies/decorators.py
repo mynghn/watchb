@@ -1,5 +1,32 @@
 from dataclasses import dataclass, fields
+from time import time
 from typing import Callable
+
+
+def execute_time(callable):
+    msg_template = (
+        "========== Time elapsed in {callable_name}: {time_elapsed} =========="
+    )
+
+    def time_checked(*args, **kwargs):
+        start = time()
+        result = callable(*args, **kwargs)
+        end = time()
+        time_elapsed = end - start
+        if time_elapsed >= 60:
+            msg = msg_template.format(
+                callable_name=f"{callable.__qualname__}()",
+                time_elapsed=f"{int(time_elapsed // 60)}m {round(time_elapsed % 60, 2):<00f}s",
+            )
+        else:
+            msg = msg_template.format(
+                callable_name=f"{callable.__qualname__}()",
+                time_elapsed=f"{round(time_elapsed, 2):<00f}s",
+            )
+        print(msg)
+        return result
+
+    return time_checked
 
 
 def flexible_dataclass(cls=None, /, **kwargs):
