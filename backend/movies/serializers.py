@@ -26,8 +26,8 @@ from rest_framework.serializers import (
 from rest_framework.settings import api_settings
 from rest_framework.validators import UniqueValidator
 
+from movies.crawlers.utils import ISO_3166_1
 from movies.decorators import lazy_load_property, validate_fields
-from movies.utils import ISO_3166_1
 
 from .mixins.serializer import GetOrSaveMixin, IDsFromAPIValidateMixin
 from .models import Country, Credit, Genre, Movie, People, Poster, Still, Video
@@ -60,6 +60,7 @@ class CountryGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
     )
     name = CharField(
         max_length=50,
+        required=False,
         validators=[custom_validators["name"]["ko"]],
     )
 
@@ -96,7 +97,9 @@ class CountryGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
             )
 
     def validate(self, attrs: dict[str, Optional[str]]) -> dict[str, str]:
-        if not attrs["alpha_2"] and not attrs["name"]:
+        alpha_2 = attrs.get("alpha_2")
+        name = attrs.get("name")
+        if not alpha_2 and not name:
             raise ValidationError(
                 {
                     api_settings.NON_FIELD_ERRORS_KEY: [
@@ -105,16 +108,14 @@ class CountryGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
                 },
                 code="required",
             )
-        elif not attrs["name"]:
+        elif not name:
             attrs["name"] = self._name_map.get(
-                iso_name := ISO_3166_1.get_country(attrs["alpha_2"])[
-                    ISO_3166_1.name_key
-                ],
+                iso_name := ISO_3166_1.get_country(alpha_2)[ISO_3166_1.name_key],
                 iso_name,
             )
-        elif not attrs["alpha_2"]:
+        elif not alpha_2:
             attrs["alpha2"] = ISO_3166_1.get_country(
-                self.reverse_name_map.get(attrs["name"], attrs["name"])
+                self.reverse_name_map.get(name, name)
             )[ISO_3166_1.alpha2_key]
         return super().validate(attrs)
 
@@ -152,7 +153,6 @@ class VideoSerializer(ModelSerializer):
 class PeopleGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
     custom_validators = {
         "kmdb_id": {"fmt": RegexValidator(regex=r"^[0-9]{8}$")},
-        "name": {"ko": OnlyKoreanValidator(allowed=r"\s[A-Z][.]\s|[- ]")},
         "en_name": {"en": RegexValidator(regex=r"[A-Za-zÀ-ÿ.- ]")},
     }
 
@@ -166,12 +166,7 @@ class PeopleGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
         trim_whitespace=True,
         validators=[custom_validators["kmdb_id"]["fmt"]],
     )
-    name = CharField(
-        max_length=50,
-        allow_blank=True,
-        trim_whitespace=True,
-        validators=[custom_validators["name"]["ko"]],
-    )
+    name = CharField(max_length=50, allow_blank=True, trim_whitespace=True)
     en_name = CharField(
         max_length=50,
         required=False,
@@ -188,7 +183,7 @@ class PeopleGetOrRegisterSerializer(GetOrSaveMixin, ModelSerializer):
         fields = "__all__"
 
     def validate(self, attrs: dict[str, str | int]) -> dict[str, str | int]:
-        if not attrs["name"] and not attrs["en_name"]:
+        if not attrs.get("name") and not attrs.get("en_name"):
             raise ValidationError(
                 {
                     api_settings.NON_FIELD_ERRORS_KEY: [
@@ -205,17 +200,11 @@ class PeopleFromAPISerializer(IDsFromAPIValidateMixin, PeopleGetOrRegisterSerial
     api_id_fields = {"tmdb_id", "kmdb_id"}
 
     custom_validators = {
-        "name": {"ko": OnlyKoreanValidator(allowed=r"[-]|\s[A-Z][.]\s|\s||!HS|!HE")},
         "en_name": {"en": RegexValidator(regex=r"[A-Za-zÀ-ÿ.-]|\s|!HS|!HE")},
     }
 
     id = None
-    name = CharField(
-        max_length=50,
-        required=False,
-        trim_whitespace=True,
-        validators=[custom_validators["name"]["ko"]],
-    )
+    name = CharField(max_length=50, required=False, trim_whitespace=True)
     en_name = CharField(
         max_length=50,
         required=False,
@@ -230,16 +219,11 @@ class PeopleFromAPISerializer(IDsFromAPIValidateMixin, PeopleGetOrRegisterSerial
 
 
 class CreditSerializer(WritableNestedModelSerializer):
-    custom_validators = {"role_name": {"ko": OnlyKoreanValidator(allowed=r"[/- ]")}}
 
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
     people = PeopleGetOrRegisterSerializer()
     role_name = CharField(
-        max_length=50,
-        required=False,
-        allow_blank=True,
-        trim_whitespace=True,
-        validators=[custom_validators["role_name"]["ko"]],
+        max_length=50, required=False, allow_blank=True, trim_whitespace=True
     )
 
     class Meta:
@@ -249,17 +233,9 @@ class CreditSerializer(WritableNestedModelSerializer):
 
 @validate_fields(fields=["role_name"], validator=validate_kmdb_text)
 class CreditFromAPISerializer(CreditSerializer):
-    custom_validators = {
-        "role_name": {"ko": OnlyKoreanValidator(allowed=r"[/-]|\s|!HS|!HE")}
-    }
-
     people = PeopleFromAPISerializer()
     role_name = CharField(
-        max_length=50,
-        required=False,
-        allow_blank=True,
-        trim_whitespace=True,
-        validators=[custom_validators["role_name"]["ko"]],
+        max_length=50, required=False, allow_blank=True, trim_whitespace=True
     )
 
 
@@ -391,6 +367,7 @@ class MovieFromAPISerializer(IDsFromAPIValidateMixin, MovieRegisterSerializer):
             MovieRegisterSerializer.custom_validators["release_date"].values()
         ),
     )
+    production_year = CharField(max_length=8, allow_null=True, required=False)
     credits = CreditFromAPISerializer(many=True)
 
     def validate_credits(
@@ -425,3 +402,14 @@ class MovieFromAPISerializer(IDsFromAPIValidateMixin, MovieRegisterSerializer):
                     f"same person among {job}s: {credits}", code="unique"
                 )
         return value
+
+    def validate_production_year(self, value: str) -> int:
+        if len(value) <= 4:
+            return int(value)
+        else:
+            try:
+                datetime.datetime.strptime(value, "%Y%m%d")
+            except ValueError:
+                raise ValidationError(f"Invalid value: {value}", code="invalid")
+            else:
+                return int(value[:4])
