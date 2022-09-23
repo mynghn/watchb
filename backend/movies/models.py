@@ -5,7 +5,7 @@ class Movie(models.Model):
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     kmdb_id = models.CharField(max_length=7, unique=True, null=True, blank=True)
 
-    title = models.CharField(max_length=200)
+    title = models.CharField(max_length=50)
     release_date = models.DateField(null=True, blank=True)
     production_year = models.IntegerField(null=True, blank=True)
     countries = models.ManyToManyField("Country", blank=True)
@@ -30,7 +30,7 @@ class People(models.Model):
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     kmdb_id = models.CharField(max_length=8, unique=True, null=True, blank=True)
 
-    name = models.CharField(max_length=50, blank=True)
+    name = models.CharField(max_length=30, blank=True)
     en_name = models.CharField(max_length=50, blank=True)
     biography = models.TextField(blank=True)
     avatar_url = models.URLField(blank=True, null=True, unique=True)
@@ -52,18 +52,18 @@ class Credit(models.Model):
     FRIEND = ("friend", "우정출연")
     CAMEO_CHOICES = [SPECIAL, WRITER, FRIEND]
     cameo_type = models.CharField(max_length=7, choices=CAMEO_CHOICES, blank=True)
-    role_name = models.CharField(max_length=50, blank=True)
+    role_name = models.CharField(max_length=200, blank=True)
 
 
 class Country(models.Model):
     # follows ISO 3166-1
     alpha_2 = models.CharField(max_length=2, primary_key=True)
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=17, unique=True)
 
 
 class Genre(models.Model):
     # from KMDb genre list
-    name = models.CharField(max_length=7, unique=True)
+    name = models.CharField(max_length=10, unique=True)
 
 
 class MovieImage(models.Model):
@@ -96,7 +96,7 @@ class Still(MovieImage):
 
 
 class Video(models.Model):
-    title = models.CharField(max_length=200, null=True)
+    title = models.CharField(max_length=200, blank=True, null=True)
 
     VIDEO_SITE_CHOICES = [("youtube", "YouTube")]
     site = models.CharField(max_length=7, choices=VIDEO_SITE_CHOICES)
