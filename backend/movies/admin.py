@@ -1,3 +1,7 @@
 from django.contrib import admin
+from django.contrib.admin import ModelAdmin
 
-# Register your models here.
+from .models import Movie, People
+
+admin.site.register(Movie, ModelAdmin)
+admin.site.register(People, ModelAdmin)
