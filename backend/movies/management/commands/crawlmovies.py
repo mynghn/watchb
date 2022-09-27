@@ -173,9 +173,9 @@ class Command(BaseCommand):
                         self.stdout.write(
                             self.style.ERROR_OUTPUT(f"Errors:\t{s.errors}")
                         )
-                        self.stdout.write("\n")
                         self.stdout.write(
-                            self.style.WARNING(
+                            self.style.ERROR_OUTPUT(
                                 f"Initial data:\t{dict((k,s.initial_data[k]) for k in s.errors.keys())}"
-                            )
+                            ),
+                            ending="\n\n",
                         )
