@@ -457,55 +457,6 @@ class ComplementaryDetailMixin(
     tmdb_agent: TMDBAPIAgent
     kmdb_agent: KMDbAPIAgent
 
-    def detail(
-        self, movie: SimpleMovieFromTMDB
-    ) -> tuple[MovieFromTMDB, Optional[MovieFromKMDb]]:
-        # 1. movie detail w/ TMDB API
-        tmdb_movie = self.tmdb_agent.movie_detail(movie.id)
-
-        # 2. movie detail w/ KMDb API
-        for tmdb_title in map(
-            lambda t: t.replace(" !", "!"),
-            filter(lambda t: bool(t), [tmdb_movie.original_title, tmdb_movie.title]),
-        ):
-            if tmdb_movie.director_en_names:
-                for kmdb_movie in self.kmdb_agent.search_movies(
-                    title=tmdb_title,
-                    director=" ".join(
-                        [
-                            n.remove_accents(n.fullname)
-                            for n in tmdb_movie.director_en_names
-                        ]
-                    ),
-                    listCount=5,
-                    max_count=10,
-                ):
-                    if kmdb_movie == tmdb_movie:
-                        return tmdb_movie, kmdb_movie
-
-            for d in tmdb_movie.release_dates:
-                for kmdb_movie in self.kmdb_agent.search_movies(
-                    title=tmdb_title,
-                    releaseDts=datetime.date.strftime(
-                        d - datetime.timedelta(days=7), "%Y%m%d"
-                    ),
-                    releaseDte=datetime.date.strftime(
-                        d + datetime.timedelta(days=7), "%Y%m%d"
-                    ),
-                    listCount=5,
-                    max_count=10,
-                ):
-                    if kmdb_movie == tmdb_movie:
-                        return tmdb_movie, kmdb_movie
-
-            for kmdb_movie in self.kmdb_agent.search_movies(
-                title=tmdb_title, listCount=25, max_count=50
-            ):
-                if kmdb_movie == tmdb_movie:
-                    return tmdb_movie, kmdb_movie
-
-        return tmdb_movie, None
-
     def get_or_detail(
         self, movie: SimpleMovieFromTMDB
     ) -> tuple[MovieFromTMDB, Optional[MovieFromKMDb]] | Movie:
