@@ -5,6 +5,8 @@ import re
 from collections import defaultdict
 from typing import Any, DefaultDict, Iterable, Literal, Optional, Type
 
+from tqdm import tqdm
+
 from ..crawlers.agents import KMDbAPIAgent, TMDBAPIAgent
 from ..crawlers.interface import APICrawler, ListAndDetailCrawler
 from ..custom_types import (
@@ -168,17 +170,28 @@ class TMDBSerializeMixin(FieldLevelSerializeMixin):
     ) -> Optional[str]:
         return movie_fetched.overview
 
+    job_choice_map = {"story": "writer", "screenplay": "writer"}
+
     def serialize_credits(
         self, movie_fetched: MovieFromTMDB, filtered: Optional[bool] = None
     ) -> list[SerializedCreditFromAPI]:
         _filtered = self.filtered if filtered is None else filtered
         return [
             dict(
-                job=staff.job.lower(),
+                job=TMDBSerializeMixin.job_choice_map.get(
+                    staff.job.lower(), staff.job.lower()
+                )
+                if _filtered
+                else staff.job.lower(),
                 people=TMDBSerializeMixin.get_or_build_person(self, staff.id),
             )
             for staff in movie_fetched.credits.crew
-            if not _filtered or (staff.job.lower() in ("director", "writer"))
+            if not _filtered
+            or (
+                staff.job.lower()
+                in {j for j, _ in Credit.job.field.choices}
+                | set(TMDBSerializeMixin.job_choice_map.keys())
+            )
         ] + [
             dict(
                 job="actor",
@@ -231,19 +244,25 @@ class TMDBSerializeMixin(FieldLevelSerializeMixin):
             or (v.site == "YouTube" and (not v.iso_639_1 or v.iso_639_1 == "ko"))
         ]
 
+    person_id_filter = {2763122: 1344127}
+
     def get_or_build_person(self, tmdb_id: int) -> SerializedPeopleFromAPI:
-        if person_in_db := People.objects.filter(tmdb_id=tmdb_id):
+        person_id = TMDBSerializeMixin.person_id_filter.get(tmdb_id, tmdb_id)
+        if person_in_db := People.objects.filter(tmdb_id=person_id):
             person_json = dict(PeopleFromAPISerializer(person_in_db.get()).data)
         else:
-            tmdb_person = self.tmdb_agent.person_detail(tmdb_id)
+            tmdb_person = self.tmdb_agent.person_detail(person_id)
             # name
-            person_json = {"en_name": tmdb_person.name}
-            for aka in tmdb_person.also_known_as:
-                if re.search(r"[가-힣]", aka):
-                    person_json["name"] = aka
-                    break
+            if re.search(r"[가-힣]", tmdb_person.name):
+                person_json = {"name": tmdb_person.name}
+            else:
+                person_json = {"en_name": tmdb_person.name}
+                for aka in tmdb_person.also_known_as:
+                    if re.search(r"[가-힣]", aka):
+                        person_json["name"] = aka
+                        break
             # id
-            person_json["tmdb_id"] = tmdb_id
+            person_json["tmdb_id"] = tmdb_person.id
             # bio
             if bio := tmdb_person.biography:
                 person_json["biography"] = bio
@@ -288,7 +307,7 @@ class KMDbSerializeMixin(FieldLevelSerializeMixin):
         self, movie_fetched: MovieFromKMDb, **kwargs
     ) -> Optional[str]:
         if movie_fetched.prodYear:
-            return movie_fetched.repRlsDate
+            return movie_fetched.prodYear
 
     genre_filter = {"코메디": "코미디", "뮤직": "음악", "멜로/로맨스": "로맨스"}
 
@@ -334,7 +353,7 @@ class KMDbSerializeMixin(FieldLevelSerializeMixin):
         for v in {
             "전체관람가": ["연소자관람가", "국민학생이상관람가", "모두관람가", "미성년자관람가", "전체관람가"],
             "12세이상관람가": ["12세관람가", "12세미만불가", "중학생가", "중학생이상"],
-            "15세이상관람가": ["15세관람가", "고등학생가", "고등학생이상관람가", "고등학생이상"],
+            "15세이상관람가": ["15세관람가", "15세미만불가", "고등학생가", "고등학생이상관람가", "고등학생이상"],
             "청소년관람불가": ["연소자불가", "연소자관람불가", "18세미만불가", "미성년자관람불가", "18세관람가(청소년관람불가)"],
         }.get(verbose, [verbose])
     }
@@ -405,8 +424,11 @@ class KMDbSerializeMixin(FieldLevelSerializeMixin):
 class TMDBDetailMixin(ListAndDetailCrawler):
     tmdb_agent: TMDBAPIAgent
 
-    def detail(self, movie: SimpleMovieFromTMDB) -> MovieFromTMDB:
-        return self.tmdb_agent.movie_detail(movie.id)
+    def get_or_detail(self, movie: SimpleMovieFromTMDB) -> MovieFromTMDB | Movie:
+        if movie_filtered := Movie.objects.filter(tmdb_id=movie.id):
+            return movie_filtered.get()
+        else:
+            return self.tmdb_agent.movie_detail(movie.id)
 
 
 class ComplementaryDetailMixin(
@@ -416,7 +438,6 @@ class ComplementaryDetailMixin(
 
     from_tmdb_fields = [
         "tmdb_id",
-        "title",
         "synopsys",
         "countries",
         "poster_set",
@@ -425,6 +446,7 @@ class ComplementaryDetailMixin(
     ]
     from_kmdb_fields = [
         "kmdb_id",
+        "title",
         "genres",
         "release_date",
         "production_year",
@@ -442,40 +464,101 @@ class ComplementaryDetailMixin(
         tmdb_movie = self.tmdb_agent.movie_detail(movie.id)
 
         # 2. movie detail w/ KMDb API
-        if tmdb_movie.director_en_names:
-            for kmdb_movie in self.kmdb_agent.search_movies(
-                title=movie.title,
-                director=" ".join(
-                    [n.remove_accents(n.fullname) for n in tmdb_movie.director_en_names]
-                ),
-                listCount=5,
-                max_count=10,
-            ):
-                if kmdb_movie == tmdb_movie:
-                    return tmdb_movie, kmdb_movie
-
-        for d in tmdb_movie.release_dates:
-            for kmdb_movie in self.kmdb_agent.search_movies(
-                title=movie.title,
-                releaseDts=datetime.date.strftime(
-                    d - datetime.timedelta(days=7), "%Y%m%d"
-                ),
-                releaseDte=datetime.date.strftime(
-                    d + datetime.timedelta(days=7), "%Y%m%d"
-                ),
-                listCount=5,
-                max_count=10,
-            ):
-                if kmdb_movie == tmdb_movie:
-                    return tmdb_movie, kmdb_movie
-
-        for kmdb_movie in self.kmdb_agent.search_movies(
-            title=movie.title, listCount=30, max_count=150
+        for tmdb_title in map(
+            lambda t: t.replace(" !", "!"),
+            filter(lambda t: bool(t), [tmdb_movie.original_title, tmdb_movie.title]),
         ):
-            if kmdb_movie == tmdb_movie:
-                return tmdb_movie, kmdb_movie
+            if tmdb_movie.director_en_names:
+                for kmdb_movie in self.kmdb_agent.search_movies(
+                    title=tmdb_title,
+                    director=" ".join(
+                        [
+                            n.remove_accents(n.fullname)
+                            for n in tmdb_movie.director_en_names
+                        ]
+                    ),
+                    listCount=5,
+                    max_count=10,
+                ):
+                    if kmdb_movie == tmdb_movie:
+                        return tmdb_movie, kmdb_movie
+
+            for d in tmdb_movie.release_dates:
+                for kmdb_movie in self.kmdb_agent.search_movies(
+                    title=tmdb_title,
+                    releaseDts=datetime.date.strftime(
+                        d - datetime.timedelta(days=7), "%Y%m%d"
+                    ),
+                    releaseDte=datetime.date.strftime(
+                        d + datetime.timedelta(days=7), "%Y%m%d"
+                    ),
+                    listCount=5,
+                    max_count=10,
+                ):
+                    if kmdb_movie == tmdb_movie:
+                        return tmdb_movie, kmdb_movie
+
+            for kmdb_movie in self.kmdb_agent.search_movies(
+                title=tmdb_title, listCount=25, max_count=50
+            ):
+                if kmdb_movie == tmdb_movie:
+                    return tmdb_movie, kmdb_movie
 
         return tmdb_movie, None
+
+    def get_or_detail(
+        self, movie: SimpleMovieFromTMDB
+    ) -> tuple[MovieFromTMDB, Optional[MovieFromKMDb]] | Movie:
+        if movie_filtered := Movie.objects.filter(tmdb_id=movie.id):
+            return movie_filtered.get()
+        else:
+            # 1. movie detail w/ TMDB API
+            tmdb_movie = self.tmdb_agent.movie_detail(movie.id)
+
+            # 2. movie detail w/ KMDb API
+            for tmdb_title in map(
+                lambda t: t.replace(" !", "!"),
+                filter(
+                    lambda t: bool(t), [tmdb_movie.original_title, tmdb_movie.title]
+                ),
+            ):
+                if tmdb_movie.director_en_names:
+                    for kmdb_movie in self.kmdb_agent.search_movies(
+                        title=tmdb_title,
+                        director=" ".join(
+                            [
+                                n.remove_accents(n.fullname)
+                                for n in tmdb_movie.director_en_names
+                            ]
+                        ),
+                        listCount=5,
+                        max_count=10,
+                    ):
+                        if kmdb_movie == tmdb_movie:
+                            return tmdb_movie, kmdb_movie
+
+                for d in tmdb_movie.release_dates:
+                    for kmdb_movie in self.kmdb_agent.search_movies(
+                        title=tmdb_title,
+                        releaseDts=datetime.date.strftime(
+                            d - datetime.timedelta(days=7), "%Y%m%d"
+                        ),
+                        releaseDte=datetime.date.strftime(
+                            d + datetime.timedelta(days=7), "%Y%m%d"
+                        ),
+                        listCount=5,
+                        max_count=10,
+                    ):
+                        if kmdb_movie == tmdb_movie:
+                            return tmdb_movie, kmdb_movie
+
+                for kmdb_movie in self.kmdb_agent.search_movies(
+                    title=tmdb_title, listCount=25, max_count=50
+                ):
+                    if kmdb_movie == tmdb_movie:
+                        return tmdb_movie, kmdb_movie
+
+            return tmdb_movie, None
 
     def serialize(
         self,
@@ -495,32 +578,48 @@ class ComplementaryDetailMixin(
             movie_json = {}
 
             for fname in self.from_tmdb_fields:
-                if tmdb_serializer := getattr(
-                    TMDBSerializeMixin, f"serialize_{fname}", False
-                ):
-                    movie_json[fname] = tmdb_serializer(
+                if (
+                    tmdb_serializer := getattr(
+                        TMDBSerializeMixin, f"serialize_{fname}", False
+                    )
+                ) and (
+                    tmdb_serialized := tmdb_serializer(
                         self, tmdb_movie_fetched, filtered=filtered
                     )
-                elif kmdb_serializer := getattr(
-                    KMDbSerializeMixin, f"serialize_{fname}", False
                 ):
-                    movie_json[fname] = kmdb_serializer(
+                    movie_json[fname] = tmdb_serialized
+                elif (
+                    kmdb_serializer := getattr(
+                        KMDbSerializeMixin, f"serialize_{fname}", False
+                    )
+                ) and (
+                    kmdb_serialized := kmdb_serializer(
                         self, kmdb_movie_fetched, filtered=filtered
                     )
+                ):
+                    movie_json[fname] = kmdb_serialized
 
             for fname in self.from_kmdb_fields:
-                if kmdb_serializer := getattr(
-                    KMDbSerializeMixin, f"serialize_{fname}", False
-                ):
-                    movie_json[fname] = kmdb_serializer(
+                if (
+                    kmdb_serializer := getattr(
+                        KMDbSerializeMixin, f"serialize_{fname}", False
+                    )
+                ) and (
+                    kmdb_serialized := kmdb_serializer(
                         self, kmdb_movie_fetched, filtered=filtered
                     )
-                elif tmdb_serializer := getattr(
-                    TMDBSerializeMixin, f"serialize_{fname}", False
                 ):
-                    movie_json[fname] = tmdb_serializer(
+                    movie_json[fname] = kmdb_serialized
+                elif (
+                    tmdb_serializer := getattr(
+                        TMDBSerializeMixin, f"serialize_{fname}", False
+                    )
+                ) and (
+                    tmdb_serialized := tmdb_serializer(
                         self, tmdb_movie_fetched, filtered=filtered
                     )
+                ):
+                    movie_json[fname] = tmdb_serialized
 
             # merge credits
             merged_credits = self.merge_credits(
@@ -544,7 +643,8 @@ class ComplementaryDetailMixin(
         return list(
             filter(
                 lambda credit: (
-                    (people := credit["people"]).get("name") or people.get("en_name")
+                    validate_kmdb_text((people := credit["people"]).get("name", ""))
+                    or validate_kmdb_text(people.get("en_name", ""))
                 )
                 and (people.get("tmdb_id") or people.get("kmdb_id")),
                 credits,
@@ -555,12 +655,13 @@ class ComplementaryDetailMixin(
         self,
         tmdb_credits: list[SerializedCreditFromAPI],
         kmdb_credits: list[SerializedCreditFromAPI],
-    ) -> dict[str, Any]:
+    ) -> list[SerializedCreditFromAPI]:
         tmdb_book = self.make_names_book(tmdb_credits)
         kmdb_book = self.make_names_book(kmdb_credits)
 
         merged = []
-        for job, tmdb_credits_by_name in tmdb_book.items():
+        for job, _ in Credit.job.field.choices:
+            tmdb_credits_by_name = tmdb_book.get(job, {})
             names_marked = set()
             kmdb_credits_by_name = kmdb_book.get(job, {})
             for (
@@ -581,17 +682,8 @@ class ComplementaryDetailMixin(
                         kmdb_credits_ += kmdb_credits_by_name.pop(k_names)
 
                     if len(tmdb_credits_) == len(kmdb_credits_) == 1:
-                        tmdb_credit = tmdb_credits_[0]
-                        kmdb_credit = kmdb_credits_[0]
                         merged.append(
-                            {
-                                "job": tmdb_credit["job"],
-                                "role_name": kmdb_credit.get("role_name")
-                                or tmdb_credit.get("role_name", ""),
-                                "cameo_type": kmdb_credit.get("cameo_type", ""),
-                                "people": kmdb_credits_[0]["people"]
-                                | tmdb_credits_[0]["people"],
-                            }
+                            self.merge_credit(tmdb_credits_[0], kmdb_credits[0])
                         )
                     else:
                         merged += (
@@ -605,6 +697,45 @@ class ComplementaryDetailMixin(
                     merged += kmdb_credits_
 
         return merged
+
+    def merge_credit(
+        self, tmdb_credit: SerializedCreditFromAPI, kmdb_credit: SerializedCreditFromAPI
+    ) -> SerializedCreditFromAPI:
+        from_tmdb_fields = {
+            "credit": [("job", "")],
+            "people": [
+                ("tmdb_id", None),
+                ("en_name", ""),
+                ("biography", ""),
+                ("avatar_url", None),
+            ],
+        }
+        from_kmdb_fields = {
+            "credit": [("role_name", ""), ("cameo_type", "")],
+            "people": [("kmdb_id", None), ("name", "")],
+        }
+        return {
+            **{
+                f: tmdb_credit.get(f) or kmdb_credit.get(f, default)
+                for f, default in from_tmdb_fields["credit"]
+            },
+            **{
+                f: kmdb_credit.get(f) or tmdb_credit.get(f, default)
+                for f, default in from_kmdb_fields["credit"]
+            },
+            "people": {
+                **{
+                    f: tmdb_credit["people"].get(f)
+                    or kmdb_credit["people"].get(f, default)
+                    for f, default in from_tmdb_fields["people"]
+                },
+                **{
+                    f: kmdb_credit["people"].get(f)
+                    or tmdb_credit["people"].get(f, default)
+                    for f, default in from_kmdb_fields["people"]
+                },
+            },
+        }
 
     def make_names_book(
         self, credits: list[SerializedCreditFromAPI]
@@ -623,13 +754,22 @@ class ComplementaryDetailMixin(
 
     def run(
         self, filtered: Optional[bool] = None, *args, **kwargs
-    ) -> list[Movie | MovieFromAPISerializer]:
-        """
-        Total process of fetch -> serialize -> register steps of crawling movies from API
-        """
+    ) -> list[tuple[Optional[Movie], Optional[MovieFromAPISerializer]]]:
+        if self.debug:
+            listed = tqdm(
+                self.list(*args, **kwargs),
+                desc="detail -> serialize -> register for each movie listed...",
+            )
+        else:
+            listed = self.list(*args, **kwargs)
+
         return [
-            self.register(self.serialize(tmdb_movie, kmdb_movie, filtered=filtered))
-            for tmdb_movie, kmdb_movie in self.fetch(*args, **kwargs)
+            (movie_detailed, None)
+            if isinstance(movie_detailed := self.get_or_detail(m), Movie)
+            else self.get_or_register(
+                self.serialize(*movie_detailed, filtered=filtered)
+            )
+            for m in listed
         ]
 
 
