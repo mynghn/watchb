@@ -189,7 +189,7 @@ class PeopleGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer
 
 @validate_fields(fields=["name", "en_name"], validator=validate_kmdb_text)
 class PeopleFromAPISerializer(RequiredTogetherMixin, PeopleGetOrSaveSerializer):
-    class Meta(PeopleGetOrSaveSerializer.Meta, RequiredTogetherMixin.Meta):
+    class Meta(PeopleGetOrSaveSerializer.Meta):
         fields = None
         exclude = ["id"]
         required_together_fields = ["tmdb_id", "kmdb_id"]
@@ -373,7 +373,7 @@ class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin):
 
 @validate_fields(fields=["title", "synopsys"], validator=validate_kmdb_text)
 class MovieFromAPISerializer(RequiredTogetherMixin, MovieRegisterSerializer):
-    class Meta(MovieRegisterSerializer.Meta, RequiredTogetherMixin.Meta):
+    class Meta(MovieRegisterSerializer.Meta):
         required_together_fields = ["tmdb_id", "kmdb_id"]
         custom_validators = {
             **MovieRegisterSerializer.Meta.custom_validators,
