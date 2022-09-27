@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Any, Container, Mapping, Optional, Type
+from typing import Any, Container, Iterable, Mapping, Optional, Type
 
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -90,17 +90,17 @@ class GetOrSaveMixin:
         return instance, extra_kwargs
 
 
-class IDsFromAPIValidateMixin:
+class RequiredTogetherMixin:
     class Meta:
-        api_id_fields: set[str]
+        required_together_fields: Iterable[str]
 
     def validate(self, attrs: dict[str, Any]):
         # API id check
-        if not self.Meta.api_id_fields & set(attrs.keys()):
+        if all(attrs.get(f) in (None, "") for f in self.Meta.required_together_fields):
             raise ValidationError(
                 {
                     api_settings.NON_FIELD_ERRORS_KEY: [
-                        f"At least one of {self.Meta.api_id_fields} should be provided"
+                        f"At least one of {self.Meta.required_together_fields} needed"
                     ]
                 },
                 code="required",

@@ -31,8 +31,8 @@ from movies.decorators import lazy_load_property, validate_fields
 
 from .mixins.serializer import (
     GetOrSaveMixin,
-    IDsFromAPIValidateMixin,
     NestedCreateMixin,
+    RequiredTogetherMixin,
     SkipFieldsMixin,
 )
 from .models import Country, Credit, Genre, Movie, People, Poster, Still, Video
@@ -188,11 +188,11 @@ class PeopleGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer
 
 
 @validate_fields(fields=["name", "en_name"], validator=validate_kmdb_text)
-class PeopleFromAPISerializer(IDsFromAPIValidateMixin, PeopleGetOrSaveSerializer):
+class PeopleFromAPISerializer(RequiredTogetherMixin, PeopleGetOrSaveSerializer):
     class Meta(PeopleGetOrSaveSerializer.Meta):
         fields = None
         exclude = ["id"]
-        api_id_fields = {"tmdb_id", "kmdb_id"}
+        required_together_fields = ["tmdb_id", "kmdb_id"]
         custom_validators = {
             **PeopleGetOrSaveSerializer.Meta.custom_validators,
             "en_name": {
@@ -373,9 +373,9 @@ class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin):
 
 
 @validate_fields(fields=["title", "synopsys"], validator=validate_kmdb_text)
-class MovieFromAPISerializer(IDsFromAPIValidateMixin, MovieRegisterSerializer):
+class MovieFromAPISerializer(RequiredTogetherMixin, MovieRegisterSerializer):
     class Meta(MovieRegisterSerializer.Meta):
-        api_id_fields = {"tmdb_id", "kmdb_id"}
+        required_together_fields = ["tmdb_id", "kmdb_id"]
 
     release_date = DateField(
         input_formats=["%Y-%m-%dT%H:%M:%S.%fZ", "%Y%m%d", ISO_8601],
