@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 import requests
+from retrying import Retrying
 
 from .. import custom_types as T
 from ..decorators import lazy_load_property
@@ -18,8 +19,30 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
     ).rstrip("/")
 
     def __init__(self, access_token: str, language: str = "ko", region: str = "KR"):
-        self.session.headers.update({"Authorization": f"Bearer {access_token}"})
-        self.session.params.update({"language": language, "region": region})
+        self._access_token = access_token
+        self._params = {"language": language, "region": region}
+        self._prepare_session()
+        self.retry = Retrying(
+            stop_max_attempt_number=5, wait_func=self._wait_before_retry
+        )
+
+    def _prepare_session(self):
+        self.session.headers.update({"Authorization": f"Bearer {self._access_token}"})
+        self.session.params.update(self._params)
+
+    def _refresh_session(self):
+        self.session = requests.Session()
+        self._prepare_session()
+
+    def _wait_before_retry(
+        self, attempt_number: int, delay_since_first_attempt_ms: int
+    ) -> int:
+        if attempt_number == 3:
+            self._refresh_session()
+        factor = 1
+        return (
+            2 ** (attempt_number + 1) - 2
+        ) * factor * 1000 - delay_since_first_attempt_ms
 
     def request_page(
         self,
@@ -34,7 +57,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         else:
             params.update({"page": 1})
 
-        return self.session.request(method, url, params, **kwargs)
+        return self.retry.call(self.request, method, url, params, **kwargs)
 
     def process_response(
         self, response: requests.Response, **kwargs
@@ -118,8 +141,10 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
             "include_video_language": "ko,null",
         }
 
+        response = self.retry.call(self.request, method, self.base_url + uri, params)
+
         return T.MovieFromTMDB(
-            **self.session.request(method, self.base_url + uri, params).json(),
+            **response.json(),
             credits=self.movie_credits(movie_id),
             kr_release_dates=self.movie_kr_release_dates(movie_id),
         )
@@ -129,9 +154,9 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         uri = f"/movie/{movie_id}/release_dates"
         KOREA_REGION = "KR"
 
-        response = self.session.request(method, self.base_url + uri).json()
+        response = self.retry.call(self.request, method, self.base_url + uri)
 
-        for r in response.get("results", []):
+        for r in response.json().get("results", []):
             if r.get("iso_3166_1") == KOREA_REGION:
                 return r.get("release_dates", [])
         return []
@@ -140,18 +165,17 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         method = "GET"
         uri = f"/movie/{movie_id}/credits"
 
-        response = self.session.request(method, self.base_url + uri).json()
+        response = self.retry.call(self.request, method, self.base_url + uri)
 
-        return T.MovieCreditsFromTMDB(**response)
+        return T.MovieCreditsFromTMDB(**response.json())
 
     def person_detail(self, person_id: int) -> T.PeopleFromTMDB:
         method = "GET"
         uri = f"/person/{person_id}"
-        params = {"append_to_response": "images", "include_image_language": "ko,null"}
 
-        return T.PeopleFromTMDB(
-            **self.session.request(method, self.base_url + uri, params).json()
-        )
+        response = self.retry.call(self.request, method, self.base_url + uri)
+
+        return T.PeopleFromTMDB(**response.json())
 
     @lazy_load_property
     def image_base_url(self) -> str:
@@ -159,8 +183,8 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         IMG_CONFIGS_KEY = "images"
         IMG_BASE_URL_KEY = "secure_base_url"
 
-        response = self.session.get(self.base_url + uri).json()
-        if not (configs := response.get(IMG_CONFIGS_KEY)):
+        response = self.retry.call(self.request, "GET", self.base_url + uri)
+        if not (configs := response.json().get(IMG_CONFIGS_KEY)):
             raise KeyError(f"Can't find '{IMG_CONFIGS_KEY}' key in {uri} API response")
         else:
             if not (base_url := configs.get(IMG_BASE_URL_KEY)):
@@ -178,7 +202,28 @@ class KMDbAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
     ).rstrip("/")
 
     def __init__(self, api_key: str):
-        self.session.params.update({"collection": "kmdb_new2", "ServiceKey": api_key})
+        self._params = {"collection": "kmdb_new2", "ServiceKey": api_key}
+        self._prepare_session()
+        self.retry = Retrying(
+            stop_max_attempt_number=5, wait_func=self._wait_before_retry
+        )
+
+    def _prepare_session(self):
+        self.session.params.update(self._params)
+
+    def _refresh_session(self):
+        self.session = requests.Session()
+        self._prepare_session()
+
+    def _wait_before_retry(
+        self, attempt_number: int, delay_since_first_attempt_ms: int
+    ) -> int:
+        if attempt_number == 3:
+            self._refresh_session()
+        factor = 1
+        return (
+            2 ** (attempt_number + 1) - 2
+        ) * factor * 1000 - delay_since_first_attempt_ms
 
     def request_page(
         self,
@@ -200,7 +245,9 @@ class KMDbAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         else:
             params.update({"startCount": 0})
 
-        return self.session.request(method, url, params, **kwargs)
+        response = self.retry.call(self.request, method, url, params, **kwargs)
+
+        return response
 
     def process_response(
         self, response: requests.Response, **kwargs

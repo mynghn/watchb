@@ -23,6 +23,11 @@ class SingletonRequestSessionMixin:
         else:
             raise ValueError("Only requests.Session object is allowed.")
 
+    def request(self, *args, **kwargs) -> requests.Response:
+        response = self.session.request(*args, **kwargs)
+        response.raise_for_status()
+        return response
+
 
 class RequestPaginateMixin:
     def request_page(
