@@ -68,10 +68,17 @@ def validate_fields(fields: list[str], validator: Callable):
     def decorator(cls):
         for fname in fields:
             method_name = f"validate_{fname}"
-            if defined := getattr(cls, method_name, False):
-                setattr(cls, method_name, lambda inst, v: validator(defined(inst, v)))
+            if predefined_method := getattr(cls, method_name, False):
+                setattr(
+                    cls, predefined_name := "__" + method_name + "__", predefined_method
+                )
+                setattr(
+                    cls,
+                    method_name,
+                    lambda inst, v: getattr(cls, predefined_name)(inst, validator(v)),
+                )
             else:
-                setattr(cls, method_name, lambda inst, v: validator(v))
+                setattr(cls, method_name, lambda _, v: validator(v))
         return cls
 
     return decorator
