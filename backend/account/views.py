@@ -1,6 +1,11 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from rest_framework.mixins import CreateModelMixin, ListModelMixin, RetrieveModelMixin
+from rest_framework.mixins import (
+    CreateModelMixin,
+    ListModelMixin,
+    RetrieveModelMixin,
+    UpdateModelMixin,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -12,15 +17,28 @@ from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .permissions import IsSelfOrAdmin
-from .serializers import SignUpSerializer, UserDetailSerializer, UserListSerializer
+from .serializers import (
+    SignUpSerializer,
+    UserDetailSerializer,
+    UserListSerializer,
+    UserUpdateSerializer,
+)
 
 User = get_user_model()
 
 
-class UserViewSet(CreateModelMixin, RetrieveModelMixin, ListModelMixin, GenericViewSet):
+class UserViewSet(
+    UpdateModelMixin,
+    CreateModelMixin,
+    RetrieveModelMixin,
+    ListModelMixin,
+    GenericViewSet,
+):
     def get_serializer_class(self):
         if self.action == "create" or (self.action == "metadata" and not self.detail):
             return SignUpSerializer
+        elif self.action in ("update", "partial_update"):
+            return UserUpdateSerializer
         elif self.action == "retrieve":
             return UserDetailSerializer
         elif self.action == "list":
@@ -31,7 +49,7 @@ class UserViewSet(CreateModelMixin, RetrieveModelMixin, ListModelMixin, GenericV
     def get_permissions(self):
         if self.action in ("create", "list"):
             return [AllowAny()]
-        elif self.action == "retrieve":
+        elif self.action in ("retrieve", "update", "partial_update"):
             return [IsSelfOrAdmin()]
         else:
             return super().get_permissions()
