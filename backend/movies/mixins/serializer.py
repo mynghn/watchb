@@ -91,15 +91,16 @@ class GetOrSaveMixin:
 
 
 class IDsFromAPIValidateMixin:
-    api_id_fields: set[str]
+    class Meta:
+        api_id_fields: set[str]
 
     def validate(self, attrs: dict[str, Any]):
         # API id check
-        if not self.api_id_fields & set(attrs.keys()):
+        if not self.Meta.api_id_fields & set(attrs.keys()):
             raise ValidationError(
                 {
                     api_settings.NON_FIELD_ERRORS_KEY: [
-                        f"At least one of {self.api_id_fields} should be provided"
+                        f"At least one of {self.Meta.api_id_fields} should be provided"
                     ]
                 },
                 code="required",

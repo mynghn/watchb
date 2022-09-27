@@ -40,18 +40,17 @@ from .validators import CountryCodeValidator, OnlyKoreanValidator, validate_kmdb
 
 
 class GenreGetOrSaveSerializer(GetOrSaveMixin, ModelSerializer):
-    custom_validators = {"name": {"ko": OnlyKoreanValidator(allowed=r"[/() ]|SF")}}
-
-    name = CharField(max_length=7, validators=[custom_validators["name"]["ko"]])
-
     class Meta:
         model = Genre
         fields = "__all__"
+        custom_validators = {"name": {"ko": OnlyKoreanValidator(allowed=r"[/() ]|SF")}}
+
+    name = CharField(max_length=10, validators=[Meta.custom_validators["name"]["ko"]])
 
 
 class CountryGetOrSaveSerializer(GetOrSaveMixin, ModelSerializer):
     alpha_2 = CharField(max_length=2, required=False)
-    name = CharField(max_length=50, required=False)
+    name = CharField(max_length=17, required=False)
 
     class Meta:
         model = Country
@@ -127,29 +126,32 @@ class StillSerializer(ModelSerializer):
 
 
 class VideoSerializer(ModelSerializer):
-    custom_validators = {"external_id": {"min_length": MinLengthValidator(11)}}
+    class Meta:
+        model = Video
+        fields = "__all__"
+        custom_validators = {"external_id": {"min_length": MinLengthValidator(11)}}
 
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
     external_id = CharField(
         max_length=11,
-        validators=[custom_validators["external_id"]["min_length"]],
+        validators=[Meta.custom_validators["external_id"]["min_length"]],
     )
-
-    class Meta:
-        model = Video
-        fields = "__all__"
 
 
 class PeopleGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer):
-    custom_validators = {
-        "kmdb_id": {"fmt": RegexValidator(regex=r"^[0-9]{8}$")},
-        "en_name": {
-            "en": RegexValidator(
-                regex=r"[A-Za-zÀ-ÿ.- ]",
-                message="Invalid People en_name '%(value)s' encountered.",
-            )
-        },
-    }
+    class Meta:
+        model = People
+        fields = "__all__"
+        can_skip_fields = {"en_name"}
+        custom_validators = {
+            "kmdb_id": {"fmt": RegexValidator(regex=r"^[0-9]{8}$")},
+            "en_name": {
+                "en": RegexValidator(
+                    regex=r"[A-Za-zÀ-ÿ.- ]",
+                    message="Invalid People en_name '%(value)s' encountered.",
+                )
+            },
+        }
 
     id = IntegerField(label="ID", required=False)
     tmdb_id = IntegerField(allow_null=True, required=False)
@@ -158,24 +160,19 @@ class PeopleGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer
         required=False,
         allow_null=True,
         trim_whitespace=True,
-        validators=[custom_validators["kmdb_id"]["fmt"]],
+        validators=[Meta.custom_validators["kmdb_id"]["fmt"]],
     )
     name = CharField(
-        max_length=50, required=False, allow_blank=True, trim_whitespace=True
+        max_length=30, required=False, allow_blank=True, trim_whitespace=True
     )
     en_name = CharField(
         max_length=50,
         required=False,
         allow_blank=True,
         trim_whitespace=True,
-        validators=[custom_validators["en_name"]["en"]],
+        validators=[Meta.custom_validators["en_name"]["en"]],
     )
     avatar_url = URLField(allow_null=True, max_length=200, required=False)
-
-    class Meta:
-        model = People
-        fields = "__all__"
-        can_skip_fields = {"en_name"}
 
     def validate(self, attrs: dict[str, str | int]) -> dict[str, str | int]:
         if not attrs.get("name") and not attrs.get("en_name"):
@@ -192,16 +189,19 @@ class PeopleGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer
 
 @validate_fields(fields=["name", "en_name"], validator=validate_kmdb_text)
 class PeopleFromAPISerializer(IDsFromAPIValidateMixin, PeopleGetOrSaveSerializer):
-    api_id_fields = {"tmdb_id", "kmdb_id"}
-
-    custom_validators = {
-        "en_name": {
-            "en": RegexValidator(
-                regex=r"[A-Za-zÀ-ÿ.-]|\s|!HS|!HE",
-                message="Invalid People en_name '%(value)s' encountered.",
-            )
-        },
-    }
+    class Meta(PeopleGetOrSaveSerializer.Meta):
+        fields = None
+        exclude = ["id"]
+        api_id_fields = {"tmdb_id", "kmdb_id"}
+        custom_validators = {
+            **PeopleGetOrSaveSerializer.Meta.custom_validators,
+            "en_name": {
+                "en": RegexValidator(
+                    regex=r"[A-Za-zÀ-ÿ.-]|\s|!HS|!HE",
+                    message="Invalid People en_name '%(value)s' encountered.",
+                )
+            },
+        }
 
     id = None
     en_name = CharField(
@@ -209,12 +209,8 @@ class PeopleFromAPISerializer(IDsFromAPIValidateMixin, PeopleGetOrSaveSerializer
         required=False,
         allow_blank=True,
         trim_whitespace=True,
-        validators=[custom_validators["en_name"]["en"]],
+        validators=[Meta.custom_validators["en_name"]["en"]],
     )
-
-    class Meta(PeopleGetOrSaveSerializer.Meta):
-        fields = None
-        exclude = ["id"]
 
 
 class CreditSerializer(SkipFieldsMixin, NestedCreateMixin):
@@ -222,7 +218,7 @@ class CreditSerializer(SkipFieldsMixin, NestedCreateMixin):
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
     people = PeopleGetOrSaveSerializer()
     role_name = CharField(
-        max_length=100, required=False, allow_blank=True, trim_whitespace=True
+        max_length=200, required=False, allow_blank=True, trim_whitespace=True
     )
 
     class Meta:
@@ -235,63 +231,68 @@ class CreditSerializer(SkipFieldsMixin, NestedCreateMixin):
 class CreditFromAPISerializer(CreditSerializer):
     people = PeopleFromAPISerializer()
     role_name = CharField(
-        max_length=100, required=False, allow_blank=True, trim_whitespace=True
+        max_length=200, required=False, allow_blank=True, trim_whitespace=True
     )
 
 
 class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin):
-    custom_validators = {
-        "title": {
-            "no_eng_sentence": RegexValidator(
-                inverse_match=True,
-                regex=r"[A-ZÀ-ÖØ-Þ][a-zß-öø-ÿ]+\s+[A-ZÀ-ÖØ-Þ][a-zß-öø-ÿ]+",
-                message="Invalid Movie title '%(value)s' encountered.",
-            ),
-        },
-        "kmdb_id": {"fmt": RegexValidator(regex=r"^[A-Z]\/[0-9]{5}$")},
-        "release_date": {
-            "min_value": MinValueValidator(datetime.date(1895, 3, 22)),
-            "max_value": MaxValueValidator(
-                lambda: datetime.date.today() + relativedelta(years=5)
-            ),
-        },
-        "production_year": {
-            "min_value": MinValueValidator(1850),
-            "max_value": MaxValueValidator(lambda: datetime.date.today().year + 3),
-        },
-        "running_time": {"min_value": MinValueValidator(datetime.timedelta())},
-    }
+    class Meta:
+        model = Movie
+        fields = "__all__"
+        can_skip_fields = {"release_date"}
+        remove_redundancy = True
+        custom_validators = {
+            "title": {
+                "no_eng_sentence": RegexValidator(
+                    inverse_match=True,
+                    regex=r"[A-ZÀ-ÖØ-Þ][a-zß-öø-ÿ]+\s+[A-ZÀ-ÖØ-Þ][a-zß-öø-ÿ]+",
+                    message="Invalid Movie title '%(value)s' encountered.",
+                ),
+            },
+            "kmdb_id": {"fmt": RegexValidator(regex=r"^[A-Z]\/[0-9]{5}$")},
+            "release_date": {
+                "min_value": MinValueValidator(datetime.date(1895, 3, 22)),
+                "max_value": MaxValueValidator(
+                    lambda: datetime.date.today() + relativedelta(years=5)
+                ),
+            },
+            "production_year": {
+                "min_value": MinValueValidator(1850),
+                "max_value": MaxValueValidator(lambda: datetime.date.today().year + 3),
+            },
+            "running_time": {"min_value": MinValueValidator(datetime.timedelta())},
+        }
 
     kmdb_id = CharField(
-        max_length=8,
+        max_length=7,
         required=False,
         allow_null=True,
         trim_whitespace=True,
         validators=[
-            custom_validators["kmdb_id"]["fmt"],
+            Meta.custom_validators["kmdb_id"]["fmt"],
             UniqueValidator(queryset=Movie.objects.all()),
         ],
     )
     title = CharField(
         max_length=50,
         trim_whitespace=True,
-        validators=[custom_validators["title"]["no_eng_sentence"]],
+        validators=[Meta.custom_validators["title"]["no_eng_sentence"]],
     )
     synopsys = CharField(allow_blank=True, required=False, trim_whitespace=True)
     release_date = DateField(
         allow_null=True,
         required=False,
-        validators=list(custom_validators["release_date"].values()),
+        validators=list(Meta.custom_validators["release_date"].values()),
     )
     production_year = IntegerField(
         required=False,
         allow_null=True,
-        validators=list(custom_validators["production_year"].values()),
+        validators=list(Meta.custom_validators["production_year"].values()),
     )
     running_time = DurationField(
         allow_null=True,
         required=False,
-        validators=[custom_validators["running_time"]["min_value"]],
+        validators=[Meta.custom_validators["running_time"]["min_value"]],
     )
     # m-to-m
     countries = CountryGetOrSaveSerializer(many=True, required=False)
@@ -301,12 +302,6 @@ class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin):
     poster_set = PosterSerializer(many=True, required=False)
     still_set = StillSerializer(many=True, required=False)
     video_set = VideoSerializer(many=True, required=False)
-
-    class Meta:
-        model = Movie
-        fields = "__all__"
-        can_skip_fields = {"release_date"}
-        remove_redundancy = True
 
     def validate_poster_set(self, value: list[dict[str, str]]) -> list[dict[str, str]]:
         main_cnt = 0
@@ -379,14 +374,15 @@ class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin):
 
 @validate_fields(fields=["title", "synopsys"], validator=validate_kmdb_text)
 class MovieFromAPISerializer(IDsFromAPIValidateMixin, MovieRegisterSerializer):
-    api_id_fields = {"tmdb_id", "kmdb_id"}
+    class Meta(MovieRegisterSerializer.Meta):
+        api_id_fields = {"tmdb_id", "kmdb_id"}
 
     release_date = DateField(
         input_formats=["%Y-%m-%dT%H:%M:%S.%fZ", "%Y%m%d", ISO_8601],
         allow_null=True,
         required=False,
         validators=list(
-            MovieRegisterSerializer.custom_validators["release_date"].values()
+            MovieRegisterSerializer.Meta.custom_validators["release_date"].values()
         ),
     )
     production_year = CharField(max_length=8, allow_null=True, required=False)
