@@ -39,17 +39,11 @@ class CountryFromTMDB:
 
 
 @flexible_dataclass
-class PeopleImagesFromTMDB(NestedInitMixin):
-    profiles: list[ImageFromTMDB]
-
-
-@flexible_dataclass
-class PeopleFromTMDB(NestedInitMixin, EmptyStringToNoneMixin):
+class PeopleFromTMDB(EmptyStringToNoneMixin):
     id: int
     name: str
     also_known_as: list[str]
-    images: PeopleImagesFromTMDB
-    biography: Optional[str] = None
+    biography: str = ""
     profile_path: Optional[str] = None
 
 
@@ -57,7 +51,7 @@ class PeopleFromTMDB(NestedInitMixin, EmptyStringToNoneMixin):
 class CastFromTMDB(EmptyStringToNoneMixin):
     id: int  # people_id
     name: str
-    character: Optional[str] = None
+    character: str = ""
 
 
 @flexible_dataclass
@@ -164,7 +158,7 @@ class PlotFromKMDb(EmptyStringToNoneMixin):
 
 
 @flexible_dataclass
-class MoviePlotsFromKMDb:
+class MoviePlotsFromKMDb(NestedInitMixin):
     plot: list[PlotFromKMDb] = field(default_factory=list)
 
 
@@ -182,7 +176,7 @@ class MovieFromKMDb(NestedInitMixin, EmptyStringToNoneMixin):
     repRlsDate: Optional[str] = None
     runtime: Optional[str] = None
     genre: Optional[str] = None
-    rating: Optional[str] = None
+    rating: str = ""
     posters: Optional[str] = None
     stills: Optional[str] = None
 
@@ -200,8 +194,9 @@ class MovieFromKMDb(NestedInitMixin, EmptyStringToNoneMixin):
             try:
                 return datetime.datetime.strptime(self.repRlsDate, "%Y%m%d").date()
             except ValueError as e:
-                if not re.match(
-                    r"^time data '[^']+' does not match format$", e.args[0]
+                if not (
+                    re.match(r"^time data '[^']+' does not match format", e.args[0])
+                    or re.match(r"^unconverted data remains", e.args[0])
                 ):
                     raise e
 
