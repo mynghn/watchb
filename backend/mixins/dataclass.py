@@ -3,7 +3,7 @@ from dataclasses import Field, fields, is_dataclass
 from importlib import import_module
 from typing import Literal, NewType, Type, Union, get_args, get_origin, get_type_hints
 
-from ..decorators import lazy_load_property
+from decorators import lazy_load_property
 
 
 class TypeHintsMixin:
