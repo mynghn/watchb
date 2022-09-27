@@ -95,9 +95,6 @@ class UserUpdateSerializer(ModelSerializer):
 
         return super().update(instance, validated_data)
 
-    def create(self, validated_data):
-        raise NotImplementedError
-
 
 class UserDetailSerializer(ModelSerializer):
     # Receives user_id from url and JWT from request header -> no need to receive any fields from payload
