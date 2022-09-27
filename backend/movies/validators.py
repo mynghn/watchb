@@ -4,7 +4,7 @@ from typing import Literal
 from django.core.validators import RegexValidator
 from rest_framework.serializers import ValidationError
 
-from movies.crawlers.utils import ISO_3166_1
+from .crawlers.utils import ISO_3166_1
 
 
 class OnlyKoreanValidator(RegexValidator):

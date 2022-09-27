@@ -1,8 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
-
-from ..decorators import lazy_load_property
+from decorators import lazy_load_property
 
 
 class SingletonRequestSessionMixin:

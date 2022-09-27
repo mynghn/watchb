@@ -6,10 +6,11 @@ import unicodedata
 from dataclasses import field
 from typing import Optional
 
-from movies.validators import validate_kmdb_text
+from decorators import flexible_dataclass, lazy_load_property
 
-from .decorators import flexible_dataclass, lazy_load_property
-from .mixins.dataclass import EmptyStringToNoneMixin, NestedInitMixin
+from mixins.dataclass import EmptyStringToNoneMixin, NestedInitMixin
+
+from .validators import validate_kmdb_text
 
 
 @flexible_dataclass

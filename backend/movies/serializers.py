@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Optional
 
 from dateutil.relativedelta import relativedelta
+from decorators import lazy_load_property, validate_fields
 from django.core.validators import (
     MaxValueValidator,
     MinLengthValidator,
@@ -26,15 +27,14 @@ from rest_framework.serializers import (
 from rest_framework.settings import api_settings
 from rest_framework.validators import UniqueValidator
 
-from movies.crawlers.utils import ISO_3166_1
-from movies.decorators import lazy_load_property, validate_fields
-
-from .mixins.serializer import (
+from mixins.serializer import (
     GetOrSaveMixin,
     NestedCreateMixin,
     RequiredTogetherMixin,
     SkipFieldsMixin,
 )
+
+from .crawlers.utils import ISO_3166_1
 from .models import Country, Credit, Genre, Movie, People, Poster, Still, Video
 from .validators import CountryCodeValidator, OnlyKoreanValidator, validate_kmdb_text
 

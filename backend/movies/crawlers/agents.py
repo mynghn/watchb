@@ -5,10 +5,10 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 import requests
+from decorators import lazy_load_property
 from retrying import Retrying
 
 from .. import custom_types as T
-from ..decorators import lazy_load_property
 from ..mixins.api import RequestPaginateMixin, SingletonRequestSessionMixin
 
 
