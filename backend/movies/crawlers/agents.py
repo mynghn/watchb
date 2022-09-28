@@ -53,7 +53,9 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         **kwargs,
     ) -> requests.Response:
         if former_response:
-            params.update({"page": former_response.json().get("page", 0) + 1})
+            params.update(
+                {"page": self.json_response(former_response).get("page", 0) + 1}
+            )
         else:
             params.update({"page": 1})
 
@@ -62,7 +64,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
     def process_response(
         self, response: requests.Response, **kwargs
     ) -> Tuple[List[Dict[str, Any]], bool]:
-        response_json: dict = response.json()
+        response_json: dict = self.json_response(response)
 
         # 1. instances
         instances = response_json.get("results", [])
@@ -144,7 +146,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         response = self.retry.call(self.request, method, self.base_url + uri, params)
 
         return T.MovieFromTMDB(
-            **response.json(),
+            **self.json_response(response),
             credits=self.movie_credits(movie_id),
             kr_release_dates=self.movie_kr_release_dates(movie_id),
         )
@@ -156,7 +158,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
         response = self.retry.call(self.request, method, self.base_url + uri)
 
-        for r in response.json().get("results", []):
+        for r in self.json_response(response).get("results", []):
             if r.get("iso_3166_1") == KOREA_REGION:
                 return r.get("release_dates", [])
         return []
@@ -167,7 +169,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
         response = self.retry.call(self.request, method, self.base_url + uri)
 
-        return T.MovieCreditsFromTMDB(**response.json())
+        return T.MovieCreditsFromTMDB(**self.json_response(response))
 
     def person_detail(self, person_id: int) -> T.PeopleFromTMDB:
         method = "GET"
@@ -175,7 +177,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
         response = self.retry.call(self.request, method, self.base_url + uri)
 
-        return T.PeopleFromTMDB(**response.json())
+        return T.PeopleFromTMDB(**self.json_response(response))
 
     @lazy_load_property
     def image_base_url(self) -> str:
@@ -184,7 +186,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         IMG_BASE_URL_KEY = "secure_base_url"
 
         response = self.retry.call(self.request, "GET", self.base_url + uri)
-        if not (configs := response.json().get(IMG_CONFIGS_KEY)):
+        if not (configs := self.json_response(response).get(IMG_CONFIGS_KEY)):
             raise KeyError(f"Can't find '{IMG_CONFIGS_KEY}' key in {uri} API response")
         else:
             if not (base_url := configs.get(IMG_BASE_URL_KEY)):
@@ -252,7 +254,7 @@ class KMDbAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
     def process_response(
         self, response: requests.Response, **kwargs
     ) -> Tuple[List[Dict[str, Any]], bool]:
-        response_json = response.json()
+        response_json = self.json_response(response)
 
         # 1. instances
         instances = response_json.get("Data", [{}])[0].get("Result", [])

@@ -1,3 +1,4 @@
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
@@ -26,6 +27,29 @@ class SingletonRequestSessionMixin:
         response = self.session.request(*args, **kwargs)
         response.raise_for_status()
         return response
+
+    def json_response(self, response: requests.Response) -> dict[str, Any]:
+        try:
+            return response.json()
+        except requests.exceptions.JSONDecodeError as e:
+            if m := re.match(
+                r"^Invalid control character at: line \d+ column \d+ \(char (\d+)\)$",
+                e.args[0],
+            ):
+                response._content = (
+                    str(
+                        response.content,
+                        encoding := response.encoding or response.apparent_encoding,
+                        errors="replace",
+                    )
+                    .replace(response.text[int(m.groups()[0])], "")
+                    .encode(encoding)
+                )
+                response._content_consumed = False
+            else:
+                raise e
+
+            return self.json_response(response)
 
 
 class RequestPaginateMixin:
