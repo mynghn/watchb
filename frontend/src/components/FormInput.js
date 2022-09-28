@@ -4,6 +4,7 @@ import Form from "react-bootstrap/Form";
 import useEffectOnUpdates from "../hooks/useEffectOnUpdates";
 
 export default function FormInput({
+  initialValue = "",
   validators,
   defaultMessages = { valid: "", invalid: "" },
   ...htmlInputProps
@@ -15,6 +16,7 @@ export default function FormInput({
 
   // determine display invalid style or not
   const [hasBlurred, setHasBlurred] = useState(false);
+  const [inputValue, setInputValue] = useState(initialValue);
   const [inputValueEmpty, setInputValueEmpty] = useState(true);
   const [displayInvalid, setDisplayInvalid] = useState(false);
   const updateDisplayInvalid = () => {
@@ -61,6 +63,7 @@ export default function FormInput({
 
   const handleChange = async (e) => {
     const inputDOM = e.currentTarget;
+    setInputValue(inputDOM.value);
     setInputValueEmpty(!Boolean(inputDOM.value));
     setValidation(await checkValidity(inputDOM));
   };
@@ -75,6 +78,7 @@ export default function FormInput({
         isInvalid={invalidStyle}
         onChange={handleChange}
         onBlur={handleBlur}
+        value={inputValue}
         {...htmlInputProps}
       />
       <Form.Control.Feedback
