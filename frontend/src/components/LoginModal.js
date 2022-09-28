@@ -40,8 +40,8 @@ export default function LoginModal() {
   const login = (email, password) => {
     obtainJWT(email, password)
       .then(retrieveUser)
-      .then(({ data: { id: userId, username } }) => {
-        dispatch(setUser({ userId, username }));
+      .then(({ data }) => {
+        dispatch(setUser(data));
         dispatch(reduxLogin());
       });
   };

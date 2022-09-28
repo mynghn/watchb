@@ -14,14 +14,17 @@ const BOTTOM_BAR_HEIGHT = "62px";
 const BOTTOM_BAR_FONTSIZE = "19px";
 
 function WatchB() {
-  const { isAuthenticated, username } = useSelector((state) => state.auth);
+  const {
+    isAuthenticated,
+    user: { username },
+  } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
   const silentLogin = () => {
     refreshJWT()
       .then(retrieveUser)
-      .then(({ data: { id: userId, username } }) => {
-        dispatch(setUser({ userId, username }));
+      .then(({ data }) => {
+        dispatch(setUser(data));
         dispatch(login());
       });
   };
