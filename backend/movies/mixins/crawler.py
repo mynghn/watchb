@@ -356,7 +356,7 @@ class KMDbSerializeMixin(FieldLevelSerializeMixin):
             "15세이상관람가": ["15세관람가", "15세미만불가", "고등학생가", "고등학생이상관람가", "고등학생이상"],
             "청소년관람불가": ["연소자불가", "연소자관람불가", "18세미만불가", "미성년자관람불가", "18세관람가(청소년관람불가)"],
         }.get(verbose, [verbose])
-    }
+    } | {"Not Rated": ""}
 
     def serialize_film_rating(
         self, movie_fetched: MovieFromKMDb, **kwargs
