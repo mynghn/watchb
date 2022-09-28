@@ -165,8 +165,8 @@ class Command(BaseCommand):
                         self.stdout.write(
                             repr(
                                 {
-                                    "tmdb_id": s.initial_data.get("tmdb_id", "empty"),
-                                    "kmdb_id": s.initial_data.get("kmdb_id", "empty"),
+                                    "tmdb_id": s.initial_data.get("tmdb_id", "EMPTY"),
+                                    "kmdb_id": s.initial_data.get("kmdb_id", "EMPTY"),
                                 }
                             )
                         )
@@ -175,7 +175,7 @@ class Command(BaseCommand):
                         )
                         self.stdout.write(
                             self.style.ERROR_OUTPUT(
-                                f"Initial data:\t{dict((k,s.initial_data[k]) for k in s.errors.keys())}"
+                                f"Initial data:\t{dict((k,s.initial_data.get(k, 'EMPTY')) for k in s.errors.keys())}"
                             ),
                             ending="\n\n",
                         )
