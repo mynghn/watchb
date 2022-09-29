@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from rest_framework.decorators import action
 from rest_framework.mixins import (
     CreateModelMixin,
     ListModelMixin,
@@ -10,7 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
-from rest_framework.status import HTTP_200_OK
+from rest_framework.status import HTTP_200_OK, HTTP_204_NO_CONTENT
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
@@ -19,6 +20,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .permissions import IsSelfOrAdmin
 from .serializers import (
     SignUpSerializer,
+    UserAvatarUpdateSerializer,
+    UserBackgroundUpdateSerializer,
     UserDetailSerializer,
     UserListSerializer,
     UserUpdateSerializer,
@@ -43,6 +46,10 @@ class UserViewSet(
             return UserDetailSerializer
         elif self.action == "list":
             return UserListSerializer
+        elif self.action == "avatar":
+            return UserAvatarUpdateSerializer
+        elif self.action == "background":
+            return UserBackgroundUpdateSerializer
         else:
             return Serializer
 
@@ -63,6 +70,22 @@ class UserViewSet(
             return User.objects.filter(**user_search_serializer.validated_data)
         else:
             return User.objects.all()
+
+    @action(detail=True, methods=["POST", "DELETE"])
+    def avatar(self, request: Request, *args, **kwargs) -> Response:
+        if self.request.method == "POST":
+            return self.update(request, *args, **kwargs)
+        elif self.request.method == "DELETE":
+            self.get_object().avatar.delete()
+            return Response(status=HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["POST", "DELETE"])
+    def background(self, request: Request, *args, **kwargs) -> Response:
+        if self.request.method == "POST":
+            return self.update(request, *args, **kwargs)
+        elif self.request.method == "DELETE":
+            self.get_object().background.delete()
+            return Response(status=HTTP_204_NO_CONTENT)
 
 
 class JWTResponseMixin:

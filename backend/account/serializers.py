@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import CharField, EmailField, IntegerField
+from rest_framework.fields import CharField, EmailField, ImageField, IntegerField
 from rest_framework.serializers import ModelSerializer
 from rest_framework.settings import api_settings
 
@@ -44,7 +44,10 @@ USER_INFO_FIELDS = [
 class UserUpdateSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = USER_INFO_FIELDS + ["curr_password", "new_password"]
+        fields = list(set(USER_INFO_FIELDS) - {"avatar", "background"}) + [
+            "curr_password",
+            "new_password",
+        ]
         read_only_fields = ["id", "date_joined", "last_login"]
 
     curr_password = CharField(required=False, write_only=True, max_length=128)
@@ -98,6 +101,24 @@ class UserUpdateSerializer(ModelSerializer):
             instance.password = make_password(validated_data.pop("new_password"))
         validated_data.pop("curr_password", None)
         return super().update(instance, validated_data)
+
+
+class UserAvatarUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        read_only_fields = ["id", "username"]
+        fields = read_only_fields + ["avatar"]
+
+    avatar = ImageField(max_length=100)
+
+
+class UserBackgroundUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        read_only_fields = ["id", "username"]
+        fields = read_only_fields + ["background"]
+
+    background = ImageField(max_length=100)
 
 
 class UserDetailSerializer(ModelSerializer):
