@@ -160,3 +160,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 # CSRF
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+
+# Media settings
+MEDIA_URL = "media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
