@@ -69,14 +69,19 @@ class UserUpdateSerializer(ModelSerializer):
 
     def validate(self, attrs: dict[str, Any]):
         validated_data = super().validate(attrs)
-        if ("curr_password" in validated_data.keys()) != (
-            new_provided := ("new_password" in validated_data.keys())
+        if ("email" in validated_data.keys()) and (
+            "curr_password" not in validated_data.keys()
+        ):
+            raise ValidationError(
+                {"curr_password": "To update email, curr_password is needed"},
+                code="required",
+            )
+        elif (new_provided := ("new_password" in validated_data.keys())) and (
+            "curr_password" not in validated_data.keys()
         ):
             raise ValidationError(
                 {
-                    "curr_password"
-                    if new_provided
-                    else "new_password": "Both curr_password & new_password are needed"
+                    "curr_password": "To update password, both curr_password & new_password are needed"
                 },
                 code="required",
             )
@@ -91,8 +96,7 @@ class UserUpdateSerializer(ModelSerializer):
     def update(self, instance: User, validated_data: dict[str, Any]):
         if "new_password" in validated_data.keys():
             instance.password = make_password(validated_data.pop("new_password"))
-            validated_data.pop("curr_password")
-
+        validated_data.pop("curr_password", None)
         return super().update(instance, validated_data)
 
 
