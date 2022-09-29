@@ -141,20 +141,31 @@ class Command(BaseCommand):
                     f"==================== SUCCESS: {n_success} ===================="
                 )
             )
-            for m, s in success:
-                self.stdout.write(
-                    self.style.SUCCESS(
+            self.stdout.write(
+                self.style.SUCCESS(
+                    [
                         model_to_dict(m, fields=["id", "tmdb_id", "kmdb_id", "title"])
-                    ),
-                )
-                if skipped_errors := getattr(self, "skipped_errors", False):
+                        for m, s in success
+                        if not getattr(s, "skipped_errors", False)
+                    ]
+                ),
+                ending="\n\n",
+            )
+            for m, s in success:
+                if skipped_errors := getattr(s, "skipped_errors", False):
                     self.stdout.write(
-                        self.style.WARNING(f"Skipped errors:\t{skipped_errors}")
+                        self.style.SUCCESS(
+                            model_to_dict(
+                                m, fields=["id", "tmdb_id", "kmdb_id", "title"]
+                            )
+                        ),
                     )
-                self.stdout.write("\n")
+                    self.stdout.write(
+                        self.style.WARNING(f"Skipped errors:\t{skipped_errors}"),
+                        ending="\n\n",
+                    )
             if any(not m for m, _ in result):
                 # FAILURE
-                self.stdout.write("\n")
                 self.stdout.write(
                     self.style.ERROR(
                         f"==================== FAILURE: {n_total - n_existed - n_success} ===================="
