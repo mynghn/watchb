@@ -1,32 +1,43 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import Button from "react-bootstrap/Button";
+import { useLocation, useNavigate } from "react-router-dom";
+import Card from "react-bootstrap/Card";
+import ListGroup from "react-bootstrap/ListGroup";
 
-import { axios, deleteRefreshTokenCookie } from "../../api";
-import { logout as reduxLogout } from "../../store";
+import store from "../../store";
+import UserSettingsModal from "../../components/UserSettingsModal";
 
 export default function Profile() {
-  const { username } = useParams();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-
-  const logout = () => {
-    deleteRefreshTokenCookie();
-    delete axios.defaults.headers.common["Authorization"];
-    dispatch(reduxLogout());
-  };
+  const {
+    auth: {
+      user: { username, profile, avatar, background },
+    },
+  } = store.getState();
+  const { pathname } = useLocation();
 
   return (
-    <div>
-      User {username}'s Profile{" "}
-      <Button
+    <Card style={{ width: "638px" }}>
+      <UserSettingsModal />
+      <Card.Img variant="top" src={background || "asf"} />
+      <Card.Body>
+        <Card.Img src={avatar || "asf"} />
+        <Card.Title>{username}</Card.Title>
+        <Card.Text>{profile || "프로필이 없습니다."}</Card.Text>
+      </Card.Body>
+      <ListGroup className="list-group-flush">
+        <ListGroup.Item>취향분석</ListGroup.Item>
+      </ListGroup>
+      <Card
         onClick={() => {
-          logout();
-          navigate("/");
+          navigate(`${pathname}/contents/movies`);
         }}
       >
-        로그아웃
-      </Button>
-    </div>
+        <Card.Img></Card.Img>
+        <Card.Body>
+          <Card.Title>영화</Card.Title>
+          <Card.Subtitle>★447</Card.Subtitle>
+          <Card.Text>보고싶어요 287</Card.Text>
+        </Card.Body>
+      </Card>
+    </Card>
   );
 }
