@@ -75,3 +75,100 @@ export const emailAlreadyRegistered = async (email) => {
   const { data } = await searchUsers({ email });
   return data.length > 0; // user with this email does exist
 };
+
+export const updateUser = (data) => {
+  const {
+    auth: {
+      user: { id: userId },
+    },
+  } = store.getState();
+  return axios
+    .patch(`${USERS_URI}${userId}/`, data)
+    .then(({ data: responseData }) => {
+      const updatedFields = Object.keys(data);
+      store.dispatch(
+        setUser(
+          Object.fromEntries(
+            Object.entries(responseData).filter(([k]) =>
+              updatedFields.includes(k)
+            )
+          )
+        )
+      );
+    });
+};
+
+export const changeEmail = (newEmail, currPwd) => {
+  return updateUser({
+    email: newEmail,
+    curr_password: currPwd,
+  });
+};
+
+export const changePassword = (newPwd, currPwd) => {
+  const {
+    auth: {
+      user: { id: userId },
+    },
+  } = store.getState();
+  return axios.patch(`${USERS_URI}${userId}/`, {
+    new_password: newPwd,
+    curr_password: currPwd,
+  });
+};
+
+export const updateAvatar = (formData) => {
+  const {
+    auth: {
+      user: { id: userId },
+    },
+  } = store.getState();
+  return axios.post(`${USERS_URI}${userId}/avatar/`, formData).then(
+    ({ data: { avatar } }) => {
+      store.dispatch(setUser({ avatar }));
+    },
+    (err) => err
+  );
+};
+
+export const updateBackground = (formData) => {
+  const {
+    auth: {
+      user: { id: userId },
+    },
+  } = store.getState();
+  return axios.post(`${USERS_URI}${userId}/background/`, formData).then(
+    ({ data: { background } }) => {
+      store.dispatch(setUser({ background }));
+    },
+    (err) => err
+  );
+};
+
+export const deleteAvatar = () => {
+  const {
+    auth: {
+      user: { id: userId },
+    },
+  } = store.getState();
+  return axios.delete(`${USERS_URI}${userId}/avatar/`).then(
+    () => {
+      store.dispatch(setUser({ avatar: null }));
+    },
+    (err) => err
+  );
+};
+
+export const deleteBackground = () => {
+  const {
+    auth: {
+      user: { id: userId },
+    },
+  } = store.getState();
+  return axios.delete(`${USERS_URI}${userId}/background/`).then(
+    () => {
+      store.dispatch(setUser({ background: null }));
+    },
+    (err) => err
+  );
+};
