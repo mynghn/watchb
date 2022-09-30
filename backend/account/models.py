@@ -44,4 +44,11 @@ class User(AbstractUser):
         max_length=7, choices=VISIBILITY_CHOICES, default=PUBLIC_OPTION[0]
     )
 
+    followings = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        related_name="followers",
+        related_query_name="follower",
+    )
+
     objects = UserManager()
