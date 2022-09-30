@@ -60,11 +60,15 @@ export default function FormInput({
   };
 
   const handleChange = async (e) => {
+    const { onChange: onChangeProp } = htmlInputProps;
+    if (onChangeProp) onChangeProp(e);
     const inputDOM = e.currentTarget;
     setInputValueEmpty(!Boolean(inputDOM.value));
     setValidation(await checkValidity(inputDOM));
   };
-  const handleBlur = () => {
+  const handleBlur = (e) => {
+    const { onBlur: onBlurProp } = htmlInputProps;
+    if (onBlurProp) onBlurProp(e);
     if (!hasBlurred) setHasBlurred(true);
   };
 
@@ -73,9 +77,9 @@ export default function FormInput({
       <Form.Control
         isValid={validStyle}
         isInvalid={invalidStyle}
-        onChange={handleChange}
-        onBlur={handleBlur}
         {...htmlInputProps}
+        onBlur={handleBlur}
+        onChange={handleChange}
       />
       <Form.Control.Feedback
         type={validation.isValid ? "valid" : "invalid"}
