@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     # 3. Custom
-    "account",
+    "accounts",
     "movies",
 ]
 
@@ -132,7 +132,7 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Custom User Model
-AUTH_USER_MODEL = "account.User"
+AUTH_USER_MODEL = "accounts.User"
 
 # DRF
 REST_FRAMEWORK = {

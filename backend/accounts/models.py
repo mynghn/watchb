@@ -33,8 +33,8 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
 
     profile = models.TextField(blank=True)
-    avatar = models.ImageField(blank=True, upload_to="account/avatar/%Y/%m/%d")
-    background = models.ImageField(blank=True, upload_to="account/background/%Y/%m/%d")
+    avatar = models.ImageField(blank=True, upload_to="accounts/avatar/%Y/%m/%d")
+    background = models.ImageField(blank=True, upload_to="accounts/background/%Y/%m/%d")
 
     PUBLIC_OPTION = ("public", "전체공개")
     PRIVATE_OPTION = ("private", "친구공개")
