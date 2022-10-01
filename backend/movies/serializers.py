@@ -138,6 +138,9 @@ class VideoSerializer(ModelSerializer):
     )
 
 
+western_alphabets = r"a-zA-Z\u00C0-\u024F"
+
+
 class PeopleGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer):
     class Meta:
         model = People
@@ -147,7 +150,7 @@ class PeopleGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer
             "kmdb_id": {"fmt": RegexValidator(regex=r"^[0-9]{8}$")},
             "en_name": {
                 "en": RegexValidator(
-                    regex=r"[A-Za-zÀ-ÿ.- ]",
+                    regex=rf"^(([']?[{western_alphabets}][']?)+[.]?['\- ]?)*([']?[{western_alphabets}][']?)+[.]?$",
                     message="Invalid People en_name '%(value)s' encountered.",
                 )
             },
@@ -193,27 +196,19 @@ class PeopleFromAPISerializer(RequiredTogetherMixin, PeopleGetOrSaveSerializer):
         fields = None
         exclude = ["id"]
         required_together_fields = ["tmdb_id", "kmdb_id"]
-        custom_validators = {
-            **PeopleGetOrSaveSerializer.Meta.custom_validators,
-            "en_name": {
-                "en": RegexValidator(
-                    regex=r"[A-Za-zÀ-ÿ.-]|\s|!HS|!HE",
-                    message="Invalid People en_name '%(value)s' encountered.",
-                )
-            },
-        }
 
     id = None
     en_name = CharField(
-        max_length=50,
-        required=False,
-        allow_blank=True,
-        trim_whitespace=True,
-        validators=[Meta.custom_validators["en_name"]["en"]],
+        max_length=50, required=False, allow_blank=True, trim_whitespace=True
     )
 
+    def validate_en_name(self, value: str) -> str:
+        if value:
+            self.Meta.custom_validators["en_name"]["en"](value)
+        return value
 
-class CreditSerializer(SkipFieldsMixin, NestedCreateMixin):
+
+class CreditSerializer(SkipFieldsMixin, NestedCreateMixin, ModelSerializer):
 
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
     people = PeopleGetOrSaveSerializer()
@@ -235,7 +230,10 @@ class CreditFromAPISerializer(CreditSerializer):
     )
 
 
-class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin):
+special_characters = r",.?!;:'\"₩~@#$%^&_\-+*/=|(){}\[\]<>/\\"
+
+
+class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin, ModelSerializer):
     class Meta:
         model = Movie
         fields = "__all__"
@@ -243,8 +241,10 @@ class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin):
         remove_redundancy = True
         custom_validators = {
             "title": {
-                "no_eng_sentence": RegexValidator(
-                    regex=r"([가-힣]+)|(^(?!.*([A-ZÀ-ÖØ-Þ][a-zß-öø-ÿ]+\s+[A-ZÀ-ÖØ-Þ][a-zß-öø-ÿ]+)).*$)",
+                "ko_and_more": RegexValidator(
+                    regex=r"[가-힣]+|"
+                    rf"^[A-Z0-9{special_characters} ]+$|"
+                    rf"^[a-zA-Z0-9{special_characters}]+$",
                     message="Invalid Movie title '%(value)s' encountered.",
                 ),
             },
@@ -275,7 +275,7 @@ class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin):
     title = CharField(
         max_length=50,
         trim_whitespace=True,
-        validators=[Meta.custom_validators["title"]["no_eng_sentence"]],
+        validators=[Meta.custom_validators["title"]["ko_and_more"]],
     )
     synopsys = CharField(allow_blank=True, required=False, trim_whitespace=True)
     release_date = DateField(
@@ -370,26 +370,24 @@ class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin):
 
         return validated
 
+    def validate_credits(
+        self, value: list[dict[str, str | dict[str, str | int]]]
+    ) -> list[dict[str, str | dict[str, str | int]]]:
+        if any(credit["job"] == "director" for credit in value):
+            return value
+        else:
+            raise ValidationError(
+                "Movie should have at least one director.", code="invalid"
+            )
+
 
 @validate_fields(fields=["title", "synopsys"], validator=validate_kmdb_text)
 class MovieFromAPISerializer(RequiredTogetherMixin, MovieRegisterSerializer):
     class Meta(MovieRegisterSerializer.Meta):
         required_together_fields = ["tmdb_id", "kmdb_id"]
-        custom_validators = {
-            **MovieRegisterSerializer.Meta.custom_validators,
-            "title": {
-                "no_eng_sentence": RegexValidator(
-                    regex=r"([가-힣]+)|(^(?!.*([A-ZÀ-ÖØ-Þ][a-zß-öø-ÿ]+(\s|!HE|!HS)+[A-ZÀ-ÖØ-Þ][a-zß-öø-ÿ]+)).*$)",
-                    message="Invalid Movie title '%(value)s' encountered.",
-                ),
-            },
-        }
         title_max_length = 50
 
-    title = CharField(
-        trim_whitespace=True,
-        validators=[Meta.custom_validators["title"]["no_eng_sentence"]],
-    )
+    title = CharField(trim_whitespace=True)
     release_date = DateField(
         input_formats=["%Y-%m-%dT%H:%M:%S.%fZ", "%Y%m%d", ISO_8601],
         allow_null=True,
@@ -402,17 +400,20 @@ class MovieFromAPISerializer(RequiredTogetherMixin, MovieRegisterSerializer):
     credits = CreditFromAPISerializer(many=True)
 
     def validate_title(self, value: str) -> str:
+        # 1. max_length
         if len(value) > self.Meta.title_max_length:
             raise ValidationError(
                 f"Movie title '{value}' has more than {self.Meta.title_max_length} characters.",
                 code="max_length",
             )
-        else:
-            return value
+        else:  # 2. regex
+            self.Meta.custom_validators["title"]["ko_and_more"](value)
+        return value
 
     def validate_credits(
         self, value: list[dict[str, str | dict[str, str | int]]]
     ) -> list[dict[str, str | dict[str, str | int]]]:
+        value = super(MovieFromAPISerializer, self).validate_credits(value)
         credits_by_job = defaultdict(list)
         for c in value:
             credits_by_job[c["job"]].append(c)
