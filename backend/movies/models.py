@@ -1,3 +1,5 @@
+from abstract_models import CreateAndUpdateModel, OnOffModel
+from django.contrib.auth import get_user_model
 from django.db import models
 
 
@@ -113,3 +115,54 @@ class Video(models.Model):
                 fields=["movie", "site", "external_id"], name="unique_video_in_movie"
             ),
         ]
+
+
+User = get_user_model()
+
+
+class Rating(CreateAndUpdateModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ratings")
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="ratings")
+    score = models.FloatField(choices=[(n / 2, str(n / 2)) for n in range(11)])
+
+
+class Review(CreateAndUpdateModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="reviews")
+    comment = models.TextField()
+
+
+class Wishlist(OnOffModel):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="wishlist_history"
+    )
+    movie = models.ForeignKey(
+        Movie, on_delete=models.CASCADE, related_name="wishlisted_history"
+    )
+
+
+class Blocklist(OnOffModel):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="blocklist_history"
+    )
+    movie = models.ForeignKey(
+        Movie, on_delete=models.CASCADE, related_name="blocklisted_history"
+    )
+
+
+class ReviewLike(OnOffModel):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="review_like_history"
+    )
+    review = models.ForeignKey(
+        Review, on_delete=models.CASCADE, related_name="liked_history"
+    )
+
+
+class PersonLike(OnOffModel):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="person_like_history"
+    )
+    person = models.ForeignKey(
+        Person, on_delete=models.CASCADE, related_name="liked_history"
+    )

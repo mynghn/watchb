@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from abstract_models import OnOffModel
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.validators import MinLengthValidator
 from django.db import models
@@ -44,11 +45,13 @@ class User(AbstractUser):
         max_length=7, choices=VISIBILITY_CHOICES, default=PUBLIC_OPTION[0]
     )
 
-    followings = models.ManyToManyField(
-        "self",
-        symmetrical=False,
-        related_name="followers",
-        related_query_name="follower",
-    )
-
     objects = UserManager()
+
+
+class Follow(OnOffModel):
+    following = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="followings"
+    )
+    follower = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="followers"
+    )
