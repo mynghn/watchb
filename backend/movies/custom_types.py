@@ -40,7 +40,7 @@ class CountryFromTMDB:
 
 
 @flexible_dataclass
-class PeopleFromTMDB(EmptyStringToNoneMixin):
+class PersonFromTMDB(EmptyStringToNoneMixin):
     id: int
     name: str
     also_known_as: list[str]
@@ -50,14 +50,14 @@ class PeopleFromTMDB(EmptyStringToNoneMixin):
 
 @flexible_dataclass
 class CastFromTMDB(EmptyStringToNoneMixin):
-    id: int  # people_id
+    id: int  # person_id
     name: str
     character: str = ""
 
 
 @flexible_dataclass
 class CrewFromTMDB(EmptyStringToNoneMixin):
-    id: int  # people_id
+    id: int  # person_id
     name: str
     job: str
 
@@ -282,7 +282,7 @@ class EnglishName(str):
         return self.normalized.__hash__()
 
 
-SerializedPeopleFromAPI = dict[str, int | str | None]
+SerializedPersonFromAPI = dict[str, int | str | None]
 
 
-SerializedCreditFromAPI = dict[str, str | SerializedPeopleFromAPI]
+SerializedCreditFromAPI = dict[str, str | SerializedPersonFromAPI]

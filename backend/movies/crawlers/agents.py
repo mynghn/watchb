@@ -171,13 +171,13 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
         return T.MovieCreditsFromTMDB(**self.json_response(response))
 
-    def person_detail(self, person_id: int) -> T.PeopleFromTMDB:
+    def person_detail(self, person_id: int) -> T.PersonFromTMDB:
         method = "GET"
         uri = f"/person/{person_id}"
 
         response = self.retry.call(self.request, method, self.base_url + uri)
 
-        return T.PeopleFromTMDB(**self.json_response(response))
+        return T.PersonFromTMDB(**self.json_response(response))
 
     @lazy_load_property
     def image_base_url(self) -> str:

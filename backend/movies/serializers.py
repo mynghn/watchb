@@ -35,7 +35,7 @@ from mixins.serializer import (
 )
 
 from .crawlers.utils import ISO_3166_1
-from .models import Country, Credit, Genre, Movie, People, Poster, Still, Video
+from .models import Country, Credit, Genre, Movie, Person, Poster, Still, Video
 from .validators import CountryCodeValidator, OnlyKoreanValidator, validate_kmdb_text
 
 
@@ -141,9 +141,9 @@ class VideoSerializer(ModelSerializer):
 western_alphabets = r"a-zA-Z\u00C0-\u024F"
 
 
-class PeopleGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer):
+class PersonGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer):
     class Meta:
-        model = People
+        model = Person
         fields = "__all__"
         can_skip_fields = {"en_name"}
         custom_validators = {
@@ -151,7 +151,7 @@ class PeopleGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer
             "en_name": {
                 "en": RegexValidator(
                     regex=rf"^(([']?[{western_alphabets}][']?)+[.]?['\- ]?)*([']?[{western_alphabets}][']?)+[.]?$",
-                    message="Invalid People en_name '%(value)s' encountered.",
+                    message="Invalid Person en_name '%(value)s' encountered.",
                 )
             },
         }
@@ -191,8 +191,8 @@ class PeopleGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer
 
 
 @validate_fields(fields=["name", "en_name"], validator=validate_kmdb_text)
-class PeopleFromAPISerializer(RequiredTogetherMixin, PeopleGetOrSaveSerializer):
-    class Meta(PeopleGetOrSaveSerializer.Meta):
+class PersonFromAPISerializer(RequiredTogetherMixin, PersonGetOrSaveSerializer):
+    class Meta(PersonGetOrSaveSerializer.Meta):
         fields = None
         exclude = ["id"]
         required_together_fields = ["tmdb_id", "kmdb_id"]
@@ -211,7 +211,7 @@ class PeopleFromAPISerializer(RequiredTogetherMixin, PeopleGetOrSaveSerializer):
 class CreditSerializer(SkipFieldsMixin, NestedCreateMixin, ModelSerializer):
 
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
-    people = PeopleGetOrSaveSerializer()
+    person = PersonGetOrSaveSerializer()
     role_name = CharField(
         max_length=200, required=False, allow_blank=True, trim_whitespace=True
     )
@@ -224,7 +224,7 @@ class CreditSerializer(SkipFieldsMixin, NestedCreateMixin, ModelSerializer):
 
 @validate_fields(fields=["role_name"], validator=validate_kmdb_text)
 class CreditFromAPISerializer(CreditSerializer):
-    people = PeopleFromAPISerializer()
+    person = PersonFromAPISerializer()
     role_name = CharField(
         max_length=200, required=False, allow_blank=True, trim_whitespace=True
     )
@@ -423,7 +423,7 @@ class MovieFromAPISerializer(RequiredTogetherMixin, MovieRegisterSerializer):
                 roles_by_actor = defaultdict(set)
                 no_roles = []
                 for c in credits:
-                    person_api_id = c["people"].get("tmdb_id") or c["people"].get(
+                    person_api_id = c["person"].get("tmdb_id") or c["person"].get(
                         "kmdb_id"
                     )
                     if not c.get("role_name"):
@@ -437,7 +437,7 @@ class MovieFromAPISerializer(RequiredTogetherMixin, MovieRegisterSerializer):
                         )
                 for c in no_roles:
                     if not roles_by_actor[
-                        c["people"].get("tmdb_id") or c["people"].get("kmdb_id")
+                        c["person"].get("tmdb_id") or c["person"].get("kmdb_id")
                     ]:
                         validated.append(c)
                     elif not self.Meta.remove_redundancy:
@@ -447,7 +447,7 @@ class MovieFromAPISerializer(RequiredTogetherMixin, MovieRegisterSerializer):
             else:
                 staff_id_set = set()
                 for c in credits:
-                    person_api_id = c["people"].get("tmdb_id") or c["people"].get(
+                    person_api_id = c["person"].get("tmdb_id") or c["person"].get(
                         "kmdb_id"
                     )
                     if person_api_id not in staff_id_set:

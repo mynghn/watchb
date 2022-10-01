@@ -15,11 +15,11 @@ from ..custom_types import (
     MovieFromKMDb,
     MovieFromTMDB,
     SerializedCreditFromAPI,
-    SerializedPeopleFromAPI,
+    SerializedPersonFromAPI,
     SimpleMovieFromTMDB,
 )
-from ..models import Credit, Movie, People
-from ..serializers import MovieFromAPISerializer, PeopleFromAPISerializer
+from ..models import Credit, Movie, Person
+from ..serializers import MovieFromAPISerializer, PersonFromAPISerializer
 from ..validators import validate_kmdb_text
 
 
@@ -183,7 +183,7 @@ class TMDBSerializeMixin(FieldLevelSerializeMixin):
                 )
                 if _filtered
                 else staff.job.lower(),
-                people=TMDBSerializeMixin.get_or_build_person(self, staff.id),
+                person=TMDBSerializeMixin.get_or_build_person(self, staff.id),
             )
             for staff in movie_fetched.credits.crew
             if not _filtered
@@ -196,7 +196,7 @@ class TMDBSerializeMixin(FieldLevelSerializeMixin):
             dict(
                 job="actor",
                 role_name=actor.character,
-                people=TMDBSerializeMixin.get_or_build_person(self, actor.id),
+                person=TMDBSerializeMixin.get_or_build_person(self, actor.id),
             )
             for actor in movie_fetched.credits.cast
         ]
@@ -246,10 +246,10 @@ class TMDBSerializeMixin(FieldLevelSerializeMixin):
 
     person_id_filter = {2763122: 1344127}
 
-    def get_or_build_person(self, tmdb_id: int) -> SerializedPeopleFromAPI:
+    def get_or_build_person(self, tmdb_id: int) -> SerializedPersonFromAPI:
         person_id = TMDBSerializeMixin.person_id_filter.get(tmdb_id, tmdb_id)
-        if person_in_db := People.objects.filter(tmdb_id=person_id):
-            person_json = dict(PeopleFromAPISerializer(person_in_db.get()).data)
+        if person_in_db := Person.objects.filter(tmdb_id=person_id):
+            person_json = dict(PersonFromAPISerializer(person_in_db.get()).data)
         else:
             tmdb_person = self.tmdb_agent.person_detail(person_id)
             # name
@@ -389,7 +389,7 @@ class KMDbSerializeMixin(FieldLevelSerializeMixin):
                 cameo_type=KMDbSerializeMixin.cameo_type_choice_map.get(s.staffEtc, "")
                 if _filtered
                 else s.staffEtc,
-                people=dict(
+                person=dict(
                     kmdb_id=s.staffId,
                     name=s.staffNm,
                     en_name=s.staffEnNm,
@@ -594,10 +594,10 @@ class ComplementaryDetailMixin(
         return list(
             filter(
                 lambda credit: (
-                    validate_kmdb_text((people := credit["people"]).get("name", ""))
-                    or validate_kmdb_text(people.get("en_name", ""))
+                    validate_kmdb_text((person := credit["person"]).get("name", ""))
+                    or validate_kmdb_text(person.get("en_name", ""))
                 )
-                and (people.get("tmdb_id") or people.get("kmdb_id")),
+                and (person.get("tmdb_id") or person.get("kmdb_id")),
                 credits,
             )
         )
@@ -618,11 +618,12 @@ class ComplementaryDetailMixin(
             for (
                 t_name,
                 t_en_name,
-            ), tmdb_credits_ in tmdb_credits_by_name.items():
-                if not (t_names := {t_name, t_en_name}) & names_marked:
+            ), _tmdb_credits in tmdb_credits_by_name.items():
+                if not names_marked & (
+                    t_names := set(filter(bool, [t_name, t_en_name]))
+                ):
                     names_marked |= t_names
-
-                    kmdb_credits_ = []
+                    _kmdb_credits = []
                     for k_names in [
                         (k_name, k_en_name)
                         for k_name, k_en_name in kmdb_credits_by_name.keys()
@@ -630,22 +631,24 @@ class ComplementaryDetailMixin(
                         or (t_en_name and k_en_name and t_en_name == k_en_name)
                     ]:
                         names_marked |= set(k_names)
-                        kmdb_credits_ += kmdb_credits_by_name.pop(k_names)
+                        _kmdb_credits += kmdb_credits_by_name.pop(k_names)
 
-                    if len(tmdb_credits_) == len(kmdb_credits_) == 1:
+                    if len(_tmdb_credits) == len(_kmdb_credits) == 1:
                         merged.append(
-                            self.merge_credit(tmdb_credits_[0], kmdb_credits[0])
+                            self.merge_credit(_tmdb_credits[0], _kmdb_credits[0])
                         )
                     else:
                         merged += (
-                            tmdb_credits_
-                            if len(tmdb_credits_) >= len(kmdb_credits_)
-                            else kmdb_credits_
+                            _tmdb_credits
+                            if len(_tmdb_credits) >= len(_kmdb_credits)
+                            else _kmdb_credits
                         )
-            for (k_name, k_en_name), kmdb_credits_ in kmdb_credits_by_name.items():
-                if not (k_names := {k_name, k_en_name}) & names_marked:
+            for (k_name, k_en_name), _kmdb_credits in kmdb_credits_by_name.items():
+                if not names_marked & (
+                    k_names := set(filter(bool, [k_name, k_en_name]))
+                ):
                     names_marked |= k_names
-                    merged += kmdb_credits_
+                    merged += _kmdb_credits
 
         return merged
 
@@ -654,7 +657,7 @@ class ComplementaryDetailMixin(
     ) -> SerializedCreditFromAPI:
         from_tmdb_fields = {
             "credit": [("job", "")],
-            "people": [
+            "person": [
                 ("tmdb_id", None),
                 ("en_name", ""),
                 ("biography", ""),
@@ -663,7 +666,7 @@ class ComplementaryDetailMixin(
         }
         from_kmdb_fields = {
             "credit": [("role_name", ""), ("cameo_type", "")],
-            "people": [("kmdb_id", None), ("name", "")],
+            "person": [("kmdb_id", None), ("name", "")],
         }
         return {
             **{
@@ -674,16 +677,16 @@ class ComplementaryDetailMixin(
                 f: kmdb_credit.get(f) or tmdb_credit.get(f, default)
                 for f, default in from_kmdb_fields["credit"]
             },
-            "people": {
+            "person": {
                 **{
-                    f: tmdb_credit["people"].get(f)
-                    or kmdb_credit["people"].get(f, default)
-                    for f, default in from_tmdb_fields["people"]
+                    f: tmdb_credit["person"].get(f)
+                    or kmdb_credit["person"].get(f, default)
+                    for f, default in from_tmdb_fields["person"]
                 },
                 **{
-                    f: kmdb_credit["people"].get(f)
-                    or tmdb_credit["people"].get(f, default)
-                    for f, default in from_kmdb_fields["people"]
+                    f: kmdb_credit["person"].get(f)
+                    or tmdb_credit["person"].get(f, default)
+                    for f, default in from_kmdb_fields["person"]
                 },
             },
         }
@@ -697,8 +700,8 @@ class ComplementaryDetailMixin(
         for c in credits:
             book[c["job"]][
                 (
-                    validate_kmdb_text(c["people"].get("name", "")),
-                    EnglishName(validate_kmdb_text(c["people"].get("en_name", ""))),
+                    validate_kmdb_text(c["person"].get("name", "")),
+                    EnglishName(validate_kmdb_text(c["person"].get("en_name", ""))),
                 )
             ].append(c)
         return book

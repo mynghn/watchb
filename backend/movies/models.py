@@ -23,10 +23,10 @@ class Movie(models.Model):
         max_length=3, choices=FILM_RATING_CHOICES, blank=True
     )
 
-    staffs = models.ManyToManyField("People", through="Credit")
+    people = models.ManyToManyField("Person", through="Credit")
 
 
-class People(models.Model):
+class Person(models.Model):
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     kmdb_id = models.CharField(max_length=8, unique=True, null=True, blank=True)
 
@@ -43,8 +43,8 @@ class Credit(models.Model):
     JOB_CHOICES = [DIRECTOR, WRITER, ACTOR]
     job = models.CharField(max_length=8, choices=JOB_CHOICES)
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="credits")
-    people = models.ForeignKey(
-        People, on_delete=models.CASCADE, related_name="filmography"
+    person = models.ForeignKey(
+        Person, on_delete=models.CASCADE, related_name="filmography"
     )
 
     # for actors
