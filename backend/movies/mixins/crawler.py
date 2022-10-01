@@ -5,6 +5,7 @@ import re
 from collections import defaultdict
 from typing import Any, DefaultDict, Iterable, Literal, Optional, Type
 
+from requests.exceptions import HTTPError
 from tqdm import tqdm
 
 from ..crawlers.agents import KMDbAPIAgent, TMDBAPIAgent
@@ -175,24 +176,16 @@ class TMDBSerializeMixin(FieldLevelSerializeMixin):
     def serialize_credits(
         self, movie_fetched: MovieFromTMDB, filtered: Optional[bool] = None
     ) -> list[SerializedCreditFromAPI]:
-        _filtered = self.filtered if filtered is None else filtered
-        return [
+        crew_serialized = [
             dict(
                 job=TMDBSerializeMixin.job_choice_map.get(
                     staff.job.lower(), staff.job.lower()
-                )
-                if _filtered
-                else staff.job.lower(),
+                ),
                 person=TMDBSerializeMixin.get_or_build_person(self, staff.id),
             )
             for staff in movie_fetched.credits.crew
-            if not _filtered
-            or (
-                staff.job.lower()
-                in {j for j, _ in Credit.job.field.choices}
-                | set(TMDBSerializeMixin.job_choice_map.keys())
-            )
-        ] + [
+        ]
+        cast_serialized = [
             dict(
                 job="actor",
                 role_name=actor.character,
@@ -200,6 +193,16 @@ class TMDBSerializeMixin(FieldLevelSerializeMixin):
             )
             for actor in movie_fetched.credits.cast
         ]
+        if self.filtered if filtered is None else filtered:
+            crew_serialized = list(
+                filter(
+                    lambda c: c["person"]
+                    and c["job"] in {j for j, _ in Credit.job.field.choices},
+                    crew_serialized,
+                )
+            )
+            cast_serialized = list(filter(lambda c: c["person"], cast_serialized))
+        return crew_serialized + cast_serialized
 
     def serialize_poster_set(
         self, movie_fetched: MovieFromTMDB, filtered: Optional[bool] = None
@@ -251,7 +254,13 @@ class TMDBSerializeMixin(FieldLevelSerializeMixin):
         if person_in_db := Person.objects.filter(tmdb_id=person_id):
             person_json = dict(PersonFromAPISerializer(person_in_db.get()).data)
         else:
-            tmdb_person = self.tmdb_agent.person_detail(person_id)
+            try:
+                tmdb_person = self.tmdb_agent.person_detail(person_id)
+            except HTTPError as e:
+                if e.response.status_code == 404:
+                    return {}
+                else:
+                    raise e
             # name
             if re.search(r"[가-힣]", tmdb_person.name):
                 person_json = {"name": tmdb_person.name}
