@@ -249,8 +249,8 @@ class KMDbAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         self.retry = Retrying(
             stop_max_attempt_number=_stop_max_attempt_number,
             wait_func=self._wait_func_factory(
-                wait_exponential_max=_wait_exponential_multiplier,
-                wait_exponential_multiplier=_wait_exponential_max,
+                wait_exponential_multiplier=_wait_exponential_multiplier,
+                wait_exponential_max=_wait_exponential_max,
                 session_refresh_attempt_numbers=_session_refresh_attempt_numbers,
             ),
         )
