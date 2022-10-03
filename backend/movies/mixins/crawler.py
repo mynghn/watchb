@@ -11,8 +11,7 @@ from tqdm import tqdm
 from urllib3.exceptions import DecodeError
 
 from ..crawlers.agents import KMDbAPIAgent, TMDBAPIAgent
-from ..crawlers.interface import APICrawler, ListAndDetailCrawler
-from ..custom_types import (
+from ..crawlers.custom_types import (
     EnglishName,
     MovieFromAPI,
     MovieFromKMDb,
@@ -22,9 +21,10 @@ from ..custom_types import (
     SerializedPersonFromAPI,
     SimpleMovieFromTMDB,
 )
+from ..crawlers.interface import APICrawler, ListAndDetailCrawler
+from ..crawlers.serializers import MovieFromAPISerializer, PersonFromAPISerializer
+from ..crawlers.validators import validate_kmdb_text
 from ..models import Credit, Movie, Person
-from ..serializers import MovieFromAPISerializer, PersonFromAPISerializer
-from ..validators import validate_kmdb_text
 
 
 class PopularListMixin(ListAndDetailCrawler):
