@@ -125,12 +125,26 @@ class Rating(CreateAndUpdateModel):
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="ratings")
     score = models.FloatField(choices=[(n / 2, str(n / 2)) for n in range(11)])
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "movie"], name="one_rating_per_user_movie"
+            )
+        ]
+
 
 class Review(CreateAndUpdateModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="reviews")
     comment = models.TextField()
     has_spoiler = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "movie"], name="one_review_per_user_movie"
+            )
+        ]
 
 
 class Wishlist(TimestampModel):
@@ -139,12 +153,26 @@ class Wishlist(TimestampModel):
         Movie, on_delete=models.CASCADE, related_name="wishlisted"
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "movie"], name="one_wishlist_per_user_movie"
+            )
+        ]
+
 
 class Blocklist(TimestampModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="blocklists")
     movie = models.ForeignKey(
         Movie, on_delete=models.CASCADE, related_name="blocklisted"
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "movie"], name="one_blocklist_per_user_movie"
+            )
+        ]
 
 
 class ReviewLike(TimestampModel):
@@ -153,9 +181,23 @@ class ReviewLike(TimestampModel):
     )
     review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name="liked")
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "review"], name="one_like_per_user_review"
+            )
+        ]
+
 
 class PersonLike(TimestampModel):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="person_likes"
     )
     person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="liked")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "person"], name="one_like_per_user_person"
+            )
+        ]

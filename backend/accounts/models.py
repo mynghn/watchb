@@ -55,3 +55,10 @@ class Follow(TimestampModel):
     follower = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="followers"
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["following", "follower"], name="one_follow_between_users"
+            )
+        ]
