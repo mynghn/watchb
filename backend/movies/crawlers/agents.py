@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Container, Dict, List, Literal, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -18,12 +18,32 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         "https://api.themoviedb.org/3",
     ).rstrip("/")
 
-    def __init__(self, access_token: str, language: str = "ko", region: str = "KR"):
+    def __init__(
+        self,
+        access_token: str,
+        language: str = "ko",
+        region: str = "KR",
+        **retry_kwargs,
+    ):
         self._access_token = access_token
         self._params = {"language": language, "region": region}
         self._prepare_session()
+
+        _wait_exponential_multiplier = retry_kwargs.pop(
+            "wait_exponential_multiplier", 1000
+        )
+        _wait_exponential_max = retry_kwargs.pop("wait_exponential_max", None)
+        _session_refresh_attempt_numbers = retry_kwargs.pop(
+            "session_refresh_attempt_numbers", {3, 5, 7}
+        )
+        _stop_max_attempt_number = retry_kwargs.pop("stop_max_attempt_number", 10)
         self.retry = Retrying(
-            stop_max_attempt_number=5, wait_func=self._wait_before_retry
+            stop_max_attempt_number=_stop_max_attempt_number,
+            wait_func=self._wait_func_factory(
+                wait_exponential_multiplier=_wait_exponential_multiplier,
+                wait_exponential_max=_wait_exponential_max,
+                session_refresh_attempt_numbers=_session_refresh_attempt_numbers,
+            ),
         )
 
     def _prepare_session(self):
@@ -34,15 +54,26 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         self.session = requests.Session()
         self._prepare_session()
 
-    def _wait_before_retry(
-        self, attempt_number: int, delay_since_first_attempt_ms: int
+    def _wait_func_factory(
+        self,
+        wait_exponential_multiplier: int,
+        wait_exponential_max: Optional[int],
+        session_refresh_attempt_numbers: Container[int],
     ) -> int:
-        if attempt_number == 3:
-            self._refresh_session()
-        factor = 1
-        return (
-            2 ** (attempt_number + 1) - 2
-        ) * factor * 1000 - delay_since_first_attempt_ms
+        def wait_func(attempt_number: int, delay_since_first_attempt_ms: int):
+            if attempt_number in session_refresh_attempt_numbers:
+                self._refresh_session()
+            to_wait = (
+                2 ** (attempt_number) - 1
+            ) * wait_exponential_multiplier - delay_since_first_attempt_ms
+            if wait_exponential_max is not None:
+                to_wait = max(wait_exponential_max, to_wait)
+            return to_wait
+
+        return wait_func
+
+    def request(self, *args, **kwargs) -> requests.Response:
+        return self.retry.call(super().request, *args, **kwargs)
 
     def request_page(
         self,
@@ -59,7 +90,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         else:
             params.update({"page": 1})
 
-        return self.retry.call(self.request, method, url, params, **kwargs)
+        return self.request(method, url, params, **kwargs)
 
     def process_response(
         self, response: requests.Response, **kwargs
@@ -143,7 +174,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
             "include_video_language": "ko,null",
         }
 
-        response = self.retry.call(self.request, method, self.base_url + uri, params)
+        response = self.request(method, self.base_url + uri, params)
 
         return T.MovieFromTMDB(
             **self.json_response(response),
@@ -156,7 +187,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         uri = f"/movie/{movie_id}/release_dates"
         KOREA_REGION = "KR"
 
-        response = self.retry.call(self.request, method, self.base_url + uri)
+        response = self.request(method, self.base_url + uri)
 
         for r in self.json_response(response).get("results", []):
             if r.get("iso_3166_1") == KOREA_REGION:
@@ -167,7 +198,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         method = "GET"
         uri = f"/movie/{movie_id}/credits"
 
-        response = self.retry.call(self.request, method, self.base_url + uri)
+        response = self.request(method, self.base_url + uri)
 
         return T.MovieCreditsFromTMDB(**self.json_response(response))
 
@@ -175,7 +206,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         method = "GET"
         uri = f"/person/{person_id}"
 
-        response = self.retry.call(self.request, method, self.base_url + uri)
+        response = self.request(method, self.base_url + uri)
 
         return T.PersonFromTMDB(**self.json_response(response))
 
@@ -185,7 +216,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         IMG_CONFIGS_KEY = "images"
         IMG_BASE_URL_KEY = "secure_base_url"
 
-        response = self.retry.call(self.request, "GET", self.base_url + uri)
+        response = self.request("GET", self.base_url + uri)
         if not (configs := self.json_response(response).get(IMG_CONFIGS_KEY)):
             raise KeyError(f"Can't find '{IMG_CONFIGS_KEY}' key in {uri} API response")
         else:
@@ -203,29 +234,55 @@ class KMDbAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         "http://api.koreafilm.or.kr/openapi-data2/wisenut",
     ).rstrip("/")
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, **retry_kwargs):
         self._params = {"collection": "kmdb_new2", "ServiceKey": api_key}
         self._prepare_session()
+
+        _wait_exponential_multiplier = retry_kwargs.pop(
+            "wait_exponential_multiplier", 1000
+        )
+        _wait_exponential_max = retry_kwargs.pop("wait_exponential_max", None)
+        _session_refresh_attempt_numbers = retry_kwargs.pop(
+            "session_refresh_attempt_numbers", {3, 5, 7}
+        )
+        _stop_max_attempt_number = retry_kwargs.pop("stop_max_attempt_number", 10)
         self.retry = Retrying(
-            stop_max_attempt_number=5, wait_func=self._wait_before_retry
+            stop_max_attempt_number=_stop_max_attempt_number,
+            wait_func=self._wait_func_factory(
+                wait_exponential_max=_wait_exponential_multiplier,
+                wait_exponential_multiplier=_wait_exponential_max,
+                session_refresh_attempt_numbers=_session_refresh_attempt_numbers,
+            ),
         )
 
     def _prepare_session(self):
         self.session.params.update(self._params)
 
     def _refresh_session(self):
+        del self.session
         self.session = requests.Session()
         self._prepare_session()
 
-    def _wait_before_retry(
-        self, attempt_number: int, delay_since_first_attempt_ms: int
+    def _wait_func_factory(
+        self,
+        wait_exponential_multiplier: int,
+        wait_exponential_max: Optional[int],
+        session_refresh_attempt_numbers: Container[int],
     ) -> int:
-        if attempt_number == 3:
-            self._refresh_session()
-        factor = 1
-        return (
-            2 ** (attempt_number + 1) - 2
-        ) * factor * 1000 - delay_since_first_attempt_ms
+        def wait_func(attempt_number: int, delay_since_first_attempt_ms: int):
+            if attempt_number in session_refresh_attempt_numbers:
+                self._refresh_session()
+            to_wait = (
+                2 ** (attempt_number) - 1
+            ) * wait_exponential_multiplier - delay_since_first_attempt_ms
+            if wait_exponential_max is not None:
+                to_wait = max(wait_exponential_max, to_wait)
+            return to_wait
+
+        return wait_func
+
+    def request(self, *args, **kwargs) -> requests.Response:
+        return self.retry.call(super().request, *args, **kwargs)
 
     def request_page(
         self,
@@ -247,7 +304,7 @@ class KMDbAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         else:
             params.update({"startCount": 0})
 
-        response = self.retry.call(self.request, method, url, params, **kwargs)
+        response = self.request(method, url, params, **kwargs)
 
         return response
 
