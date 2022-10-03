@@ -6,23 +6,23 @@ class TimestampModel(models.Model):
     class Meta:
         abstract = True
 
-    timestamp = models.DateTimeField(auto_now_add=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
 
 class CreateAndUpdateModel(models.Model):
     class Meta:
         abstract = True
 
-    created_at = models.DateTimeField(auto_now_add=False)
-    updated_at = models.DateTimeField(auto_now=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
 class OnOffModel(models.Model):
     class Meta:
         abstract = True
 
-    first_timestamp = models.DateTimeField(auto_now_add=False)
-    last_timestamp = models.DateTimeField(auto_now=False)
+    first_timestamp = models.DateTimeField(auto_now_add=True)
+    last_timestamp = models.DateTimeField(auto_now=True)
     on = models.BooleanField(default=True)
 
     @property
