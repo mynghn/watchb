@@ -1,4 +1,4 @@
-from abstract_models import CreateAndUpdateModel, OnOffModel
+from abstract_models import CreateAndUpdateModel, TimestampModel
 from django.contrib.auth import get_user_model
 from django.db import models
 
@@ -132,37 +132,29 @@ class Review(CreateAndUpdateModel):
     comment = models.TextField()
 
 
-class Wishlist(OnOffModel):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="wishlist_history"
-    )
+class Wishlist(TimestampModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="wishlists")
     movie = models.ForeignKey(
-        Movie, on_delete=models.CASCADE, related_name="wishlisted_history"
+        Movie, on_delete=models.CASCADE, related_name="wishlisted"
     )
 
 
-class Blocklist(OnOffModel):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="blocklist_history"
-    )
+class Blocklist(TimestampModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="blocklists")
     movie = models.ForeignKey(
-        Movie, on_delete=models.CASCADE, related_name="blocklisted_history"
+        Movie, on_delete=models.CASCADE, related_name="blocklisted"
     )
 
 
-class ReviewLike(OnOffModel):
+class ReviewLike(TimestampModel):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="review_like_history"
+        User, on_delete=models.CASCADE, related_name="review_likes"
     )
-    review = models.ForeignKey(
-        Review, on_delete=models.CASCADE, related_name="liked_history"
-    )
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name="liked")
 
 
-class PersonLike(OnOffModel):
+class PersonLike(TimestampModel):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="person_like_history"
+        User, on_delete=models.CASCADE, related_name="person_likes"
     )
-    person = models.ForeignKey(
-        Person, on_delete=models.CASCADE, related_name="liked_history"
-    )
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="liked")

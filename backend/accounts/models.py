@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from abstract_models import OnOffModel
+from abstract_models import TimestampModel
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.validators import MinLengthValidator
 from django.db import models
@@ -48,7 +48,7 @@ class User(AbstractUser):
     objects = UserManager()
 
 
-class Follow(OnOffModel):
+class Follow(TimestampModel):
     following = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="followings"
     )
