@@ -729,13 +729,24 @@ class ComplementaryDetailMixin(
         str, DefaultDict[tuple[str, EnglishName], list[SerializedCreditFromAPI]]
     ]:
         book = defaultdict(lambda: defaultdict(list))
+        names_by_id = {}
         for c in credits:
-            book[c["job"]][
-                (
-                    validate_kmdb_text(c["person"].get("name", "")),
-                    EnglishName(validate_kmdb_text(c["person"].get("en_name", ""))),
+            if api_id := c["person"].get("tmdb_id") or c["person"].get("kmdb_id"):
+                if names := names_by_id.get(api_id):
+                    c["person"]["name"], c["person"]["en_name"] = names
+                else:
+                    names_by_id[api_id] = (
+                        c["person"].get("name", ""),
+                        c["person"].get("en_name", ""),
+                    )
+                name_key = validate_kmdb_text(names_by_id[api_id][0])
+                en_name_key = EnglishName(validate_kmdb_text(names_by_id[api_id][1]))
+            else:
+                name_key = validate_kmdb_text(c["person"].get("name", ""))
+                en_name_key = EnglishName(
+                    validate_kmdb_text(c["person"].get("en_name", ""))
                 )
-            ].append(c)
+            book[c["job"]][(name_key, en_name_key)].append(c)
         return book
 
     def run(
