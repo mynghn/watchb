@@ -6,9 +6,9 @@ from typing import Any, Optional, Type
 from rest_framework.serializers import ModelSerializer
 from tqdm import tqdm
 
-from ..custom_types import MovieFromAPI, SimpleMovieFromTMDB
+from ..crawlers.custom_types import MovieFromAPI, SimpleMovieFromTMDB
+from ..crawlers.serializers import MovieFromAPISerializer
 from ..models import Movie
-from ..serializers import MovieFromAPISerializer
 
 
 class APICrawler(metaclass=ABCMeta):

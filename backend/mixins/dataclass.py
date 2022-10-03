@@ -19,7 +19,7 @@ class TypeHintsMixin:
             r"(?<=name ')[a-zA-Z_][a-zA-Z0-9_]*(?=' is not defined)", e.args[0]
         ).group(0)
         _g = globals()
-        _g[name] = getattr(import_module("movies.custom_types"), name)
+        _g[name] = getattr(import_module("movies.crawlers.custom_types"), name)
         return self._with_args_kwargs(globalns=_g)
 
     def _with_args_kwargs(self, *args, **kwargs) -> dict[str, Type]:

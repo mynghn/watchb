@@ -8,7 +8,7 @@ import requests
 from decorators import lazy_load_property
 from retrying import Retrying
 
-from .. import custom_types as T
+from ..crawlers import custom_types as T
 from ..mixins.api import RequestPaginateMixin, SingletonRequestSessionMixin
 
 
