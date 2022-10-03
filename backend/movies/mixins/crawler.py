@@ -4,9 +4,11 @@ import datetime
 import re
 from collections import defaultdict
 from typing import Any, DefaultDict, Iterable, Literal, Optional, Type
+from zlib import error as zlib_error
 
-from requests.exceptions import HTTPError
+from requests.exceptions import ContentDecodingError, HTTPError
 from tqdm import tqdm
+from urllib3.exceptions import DecodeError
 
 from ..crawlers.agents import KMDbAPIAgent, TMDBAPIAgent
 from ..crawlers.interface import APICrawler, ListAndDetailCrawler
@@ -15,6 +17,7 @@ from ..custom_types import (
     MovieFromAPI,
     MovieFromKMDb,
     MovieFromTMDB,
+    PersonFromTMDB,
     SerializedCreditFromAPI,
     SerializedPersonFromAPI,
     SimpleMovieFromTMDB,
@@ -247,39 +250,59 @@ class TMDBSerializeMixin(FieldLevelSerializeMixin):
             or (v.site == "YouTube" and (not v.iso_639_1 or v.iso_639_1 == "ko"))
         ]
 
-    person_id_filter = {2763122: 1344127}
+    person_id_filter = {2763122: 1344127, 2775705: 15801}
 
     def get_or_build_person(self, tmdb_id: int) -> SerializedPersonFromAPI:
         person_id = TMDBSerializeMixin.person_id_filter.get(tmdb_id, tmdb_id)
         if person_in_db := Person.objects.filter(tmdb_id=person_id):
             person_json = dict(PersonFromAPISerializer(person_in_db.get()).data)
         else:
-            try:
-                tmdb_person = self.tmdb_agent.person_detail(person_id)
-            except HTTPError as e:
-                if e.response.status_code == 404:
-                    return {}
+            if tmdb_person := self.fetch_person(person_id):
+                # name
+                if re.search(r"[가-힣]", tmdb_person.name):
+                    person_json = {"name": tmdb_person.name}
                 else:
-                    raise e
-            # name
-            if re.search(r"[가-힣]", tmdb_person.name):
-                person_json = {"name": tmdb_person.name}
+                    person_json = {"en_name": tmdb_person.name}
+                    for aka in tmdb_person.also_known_as:
+                        if re.search(r"[가-힣]", aka):
+                            person_json["name"] = aka
+                            break
+                # id
+                person_json["tmdb_id"] = tmdb_person.id
+                # bio
+                if bio := tmdb_person.biography:
+                    person_json["biography"] = bio
+                # avatar
+                if p := tmdb_person.profile_path:
+                    person_json["avatar_url"] = self.tmdb_agent.image_base_url + p
             else:
-                person_json = {"en_name": tmdb_person.name}
-                for aka in tmdb_person.also_known_as:
-                    if re.search(r"[가-힣]", aka):
-                        person_json["name"] = aka
-                        break
-            # id
-            person_json["tmdb_id"] = tmdb_person.id
-            # bio
-            if bio := tmdb_person.biography:
-                person_json["biography"] = bio
-            # avatar
-            if p := tmdb_person.profile_path:
-                person_json["avatar_url"] = self.tmdb_agent.image_base_url + p
+                person_json = {}
 
         return person_json
+
+    def fetch_person(self, tmdb_id: int) -> Optional[PersonFromTMDB]:
+        try:
+            return self.tmdb_agent.person_detail(tmdb_id)
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                print(f"TMDB person doesn't exist: {tmdb_id}")
+            else:
+                raise e
+        except ContentDecodingError as e:
+            if (
+                isinstance(e.args[0], DecodeError)
+                and e.args[0].args[0]
+                == "Received response with content-encoding: gzip, but failed to decode it."
+                and len(e.args[0].args) > 1
+                and isinstance(e.args[0].args[1], zlib_error)
+                and e.args[0].args[1].args[0]
+                == "Error -3 while decompressing data: incorrect header check"
+            ):
+                print(
+                    f"TMDB API returned response with invalid encoding to {tmdb_id} person detail request"
+                )
+            else:
+                raise e
 
 
 class KMDbSerializeMixin(FieldLevelSerializeMixin):
