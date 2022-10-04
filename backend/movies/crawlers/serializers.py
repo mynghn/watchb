@@ -144,7 +144,7 @@ class VideoSerializer(ModelSerializer):
     )
 
 
-western_alphabets = r"a-zA-Z\u00C0-\u024F"
+western_alphabets = r"a-zA-Z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F\u1E00-\u1EFF"
 
 
 class PersonGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer):
@@ -156,7 +156,7 @@ class PersonGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer
             "kmdb_id": {"fmt": RegexValidator(regex=r"^[0-9]{8}$")},
             "en_name": {
                 "en": RegexValidator(
-                    regex=rf"^(([']?[{western_alphabets}][']?)+[.]?['\- ]?)*([']?[{western_alphabets}][']?)+[.]?$",
+                    regex=rf"^(([']?[{western_alphabets}][']?)+[.]?['\- ]?)*([']?[{western_alphabets}0-9][']?)+[.]?$",
                     message="Invalid Person en_name '%(value)s' encountered.",
                 )
             },
