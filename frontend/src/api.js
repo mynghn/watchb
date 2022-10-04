@@ -76,26 +76,29 @@ export const emailAlreadyRegistered = async (email) => {
   return data.length > 0; // user with this email does exist
 };
 
+const onUpdateUserSuccessFactory = (updateFields) => {
+  return ({ data: responseData }) => {
+    store.dispatch(
+      setUser(
+        Object.fromEntries(
+          Object.entries(responseData).filter(([k]) => updateFields.includes(k))
+        )
+      )
+    );
+  };
+};
+
 export const updateUser = (data) => {
   const {
     auth: {
       user: { id: userId },
     },
   } = store.getState();
+  const uri = `${USERS_URI}${userId}/`;
+
   return axios
-    .patch(`${USERS_URI}${userId}/`, data)
-    .then(({ data: responseData }) => {
-      const updatedFields = Object.keys(data);
-      store.dispatch(
-        setUser(
-          Object.fromEntries(
-            Object.entries(responseData).filter(([k]) =>
-              updatedFields.includes(k)
-            )
-          )
-        )
-      );
-    });
+    .patch(uri, data)
+    .then(onUpdateUserSuccessFactory(Object.keys(data)));
 };
 
 export const changeEmail = (newEmail, currPwd) => {
@@ -111,7 +114,9 @@ export const changePassword = (newPwd, currPwd) => {
       user: { id: userId },
     },
   } = store.getState();
-  return axios.patch(`${USERS_URI}${userId}/`, {
+  const uri = `${USERS_URI}${userId}/`;
+
+  return axios.patch(uri, {
     new_password: newPwd,
     curr_password: currPwd,
   });
@@ -123,12 +128,9 @@ export const updateAvatar = (formData) => {
       user: { id: userId },
     },
   } = store.getState();
-  return axios.post(`${USERS_URI}${userId}/avatar/`, formData).then(
-    ({ data: { avatar } }) => {
-      store.dispatch(setUser({ avatar }));
-    },
-    (err) => err
-  );
+  const uri = `${USERS_URI}${userId}/avatar/`;
+
+  return axios.post(uri, formData).then(onUpdateUserSuccessFactory(["avatar"]));
 };
 
 export const updateBackground = (formData) => {
@@ -137,12 +139,11 @@ export const updateBackground = (formData) => {
       user: { id: userId },
     },
   } = store.getState();
-  return axios.post(`${USERS_URI}${userId}/background/`, formData).then(
-    ({ data: { background } }) => {
-      store.dispatch(setUser({ background }));
-    },
-    (err) => err
-  );
+  const uri = `${USERS_URI}${userId}/background/`;
+
+  return axios
+    .post(uri, formData)
+    .then(onUpdateUserSuccessFactory(["background"]));
 };
 
 export const deleteAvatar = () => {
@@ -151,12 +152,11 @@ export const deleteAvatar = () => {
       user: { id: userId },
     },
   } = store.getState();
-  return axios.delete(`${USERS_URI}${userId}/avatar/`).then(
-    () => {
-      store.dispatch(setUser({ avatar: null }));
-    },
-    (err) => err
-  );
+  const uri = `${USERS_URI}${userId}/avatar/`;
+
+  return axios.delete(uri).then(() => {
+    store.dispatch(setUser({ avatar: null }));
+  });
 };
 
 export const deleteBackground = () => {
@@ -165,10 +165,9 @@ export const deleteBackground = () => {
       user: { id: userId },
     },
   } = store.getState();
-  return axios.delete(`${USERS_URI}${userId}/background/`).then(
-    () => {
-      store.dispatch(setUser({ background: null }));
-    },
-    (err) => err
-  );
+  const uri = `${USERS_URI}${userId}/background/`;
+
+  return axios.delete(uri).then(() => {
+    store.dispatch(setUser({ background: null }));
+  });
 };
