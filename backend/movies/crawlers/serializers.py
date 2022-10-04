@@ -33,6 +33,8 @@ from rest_framework.serializers import (
 from rest_framework.settings import api_settings
 from rest_framework.validators import UniqueValidator
 
+from serializers import SkipChildsListSerializer
+
 from ..models import Country, Credit, Genre, Movie, Person, Poster, Still, Video
 from .utils import ISO_3166_1
 from .validators import CountryCodeValidator, OnlyKoreanValidator, validate_kmdb_text
@@ -42,6 +44,7 @@ class GenreGetOrSaveSerializer(GetOrSaveMixin, ModelSerializer):
     class Meta:
         model = Genre
         fields = "__all__"
+        list_serializer_class = SkipChildsListSerializer
         custom_validators = {"name": {"ko": OnlyKoreanValidator(allowed=r"[/() ]|SF")}}
 
     name = CharField(max_length=10, validators=[Meta.custom_validators["name"]["ko"]])
@@ -54,6 +57,7 @@ class CountryGetOrSaveSerializer(GetOrSaveMixin, ModelSerializer):
     class Meta:
         model = Country
         fields = "__all__"
+        list_serializer_class = SkipChildsListSerializer
 
     _name_map = {"대한민국": "한국"}
 
@@ -114,6 +118,7 @@ class PosterSerializer(ModelSerializer):
     class Meta:
         model = Poster
         fields = "__all__"
+        list_serializer_class = SkipChildsListSerializer
 
 
 class StillSerializer(ModelSerializer):
@@ -122,12 +127,14 @@ class StillSerializer(ModelSerializer):
     class Meta:
         model = Still
         fields = "__all__"
+        list_serializer_class = SkipChildsListSerializer
 
 
 class VideoSerializer(ModelSerializer):
     class Meta:
         model = Video
         fields = "__all__"
+        list_serializer_class = SkipChildsListSerializer
         custom_validators = {"external_id": {"min_length": MinLengthValidator(11)}}
 
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
@@ -218,6 +225,7 @@ class CreditSerializer(SkipFieldsMixin, NestedCreateMixin, ModelSerializer):
     class Meta:
         model = Credit
         fields = "__all__"
+        list_serializer_class = SkipChildsListSerializer
         can_skip_fields = {"role_name"}
 
 
@@ -295,7 +303,7 @@ class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin, ModelSerialize
     # m-to-m
     countries = CountryGetOrSaveSerializer(many=True, required=False)
     genres = GenreGetOrSaveSerializer(many=True, required=False)
-    credits = CreditSerializer(many=True)  # w/ through model
+    credits = CreditSerializer(many=True, allow_empty=False)  # w/ through model
     # 1-to-m
     poster_set = PosterSerializer(many=True, required=False)
     still_set = StillSerializer(many=True, required=False)
@@ -372,12 +380,16 @@ class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin, ModelSerialize
     def validate_credits(
         self, value: list[dict[str, str | dict[str, str | int]]]
     ) -> list[dict[str, str | dict[str, str | int]]]:
-        if any(credit["job"] == "director" for credit in value):
-            return value
-        else:
+        if not value:
+            raise ValidationError(
+                "Movie should have at least one credit.", code="invalid"
+            )
+        elif not any(credit["job"] == "director" for credit in value):
             raise ValidationError(
                 "Movie should have at least one director.", code="invalid"
             )
+        else:
+            return value
 
 
 @validate_fields(fields=["title", "synopsys"], validator=validate_kmdb_text)

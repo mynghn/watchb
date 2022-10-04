@@ -1,6 +1,8 @@
 from collections import OrderedDict
+from itertools import chain
 from typing import Any, Container, Iterable, Mapping, Optional, Type
 
+from decorators import lazy_load_property
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Model, UniqueConstraint
@@ -8,8 +10,9 @@ from django.db.models.fields.related import RelatedField
 from django.forms.models import model_to_dict
 from drf_writable_nested.mixins import NestedCreateMixin
 from rest_framework.fields import SkipField, get_error_detail, set_value
-from rest_framework.serializers import ValidationError
+from rest_framework.serializers import BaseSerializer, Serializer, ValidationError
 from rest_framework.settings import api_settings
+from rest_framework.utils.html import is_html_input, parse_html_list
 
 
 class GetOrSaveMixin:
@@ -108,7 +111,83 @@ class RequiredTogetherMixin:
         return super().validate(attrs)
 
 
-class SkipFieldsMixin:
+class CollectSkippedErrorsMixin:
+    skipped_field_errors: OrderedDict
+    skipped_child_errors: list
+
+    def merge_serializer_errors(self, *serializer_errors):
+        return {
+            fname: self.merge_serializer_errors(
+                *map(lambda err: err.get(fname, {}), serializer_errors)
+            )
+            if any(
+                (ferr := err.get(fname, [])) and isinstance(ferr, dict)
+                for err in serializer_errors
+            )
+            else list(
+                chain.from_iterable(
+                    map(lambda err: err.get(fname, []), serializer_errors)
+                )
+            )
+            for fname in chain(*serializer_errors)
+        }
+
+    @lazy_load_property
+    def skipped_errors(self) -> dict | list[dict]:
+        if isinstance(self, SkipChildsMixin):
+            return getattr(self, "skipped_child_errors", [])
+        else:
+            skipped_field_errors = getattr(self, "skipped_field_errors", {})
+            nested_errors = {
+                fname: nested_errors
+                for fname, field in self.fields.items()
+                if isinstance(field, BaseSerializer)
+                and (nested_errors := getattr(field, "skipped_errors", False))
+            }
+            intersections = {}
+            for fname in skipped_field_errors.keys():
+                if fname in nested_errors.keys():
+                    skipped_field_err = skipped_field_errors[fname]
+                    nested_err = nested_errors[fname]
+                    assert type(skipped_field_err) == type(nested_err)
+                    if isinstance(nested_err, dict):
+                        merged = self.merge_serializer_errors(
+                            skipped_field_err, nested_err
+                        )
+                    elif (
+                        isinstance(nested_err, list)
+                        and (len(skipped_field_err) == len(nested_err))
+                        and all(isinstance(err, dict) for err in nested_err)
+                    ):
+                        merged = [
+                            self.merge_serializer_errors(*errors)
+                            for errors in zip(skipped_field_err, nested_err)
+                        ]
+                    else:
+                        raise TypeError(
+                            f"Undefined serializer error type encountered: {type(nested_err)}"
+                        )
+                    intersections[fname] = merged
+            return skipped_field_errors | nested_errors | intersections
+
+    @skipped_errors.deleter
+    def skipped_errors(self):
+        del self._skipped_errors
+        if hasattr(self, "skipped_field_errors"):
+            del self.skipped_field_errors
+        if hasattr(self, "skipped_child_errors"):
+            del self.skipped_child_errors
+        if isinstance(self, Serializer):
+            for f in self.fields.values():
+                if isinstance(f, BaseSerializer) and getattr(
+                    f, "skipped_errors", False
+                ):
+                    del f.skipped_errors
+
+
+class SkipFieldsMixin(CollectSkippedErrorsMixin):
+    skipped_field_errors: OrderedDict
+
     class Meta:
         can_skip_fields: Container[str]
 
@@ -157,7 +236,74 @@ class SkipFieldsMixin:
             raise ValidationError(errors)
 
         if skippable_errors:
-            self.skipped_errors = ValidationError(skippable_errors).detail
+            self.skipped_field_errors = skippable_errors
+
+        return ret
+
+
+class SkipChildsMixin(CollectSkippedErrorsMixin):
+    skipped_child_errors: list
+
+    def to_internal_value(self, data: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """
+        List of dicts of native values <- List of dicts of primitive datatypes.
+        """
+        if is_html_input(data):
+            data = parse_html_list(data, default=[])
+
+        if not isinstance(data, list):
+            message = self.error_messages["not_a_list"].format(
+                input_type=type(data).__name__
+            )
+            raise ValidationError(
+                {api_settings.NON_FIELD_ERRORS_KEY: [message]}, code="not_a_list"
+            )
+
+        if not self.allow_empty and len(data) == 0:
+            message = self.error_messages["empty"]
+            raise ValidationError(
+                {api_settings.NON_FIELD_ERRORS_KEY: [message]}, code="empty"
+            )
+
+        if self.max_length is not None and len(data) > self.max_length:
+            message = self.error_messages["max_length"].format(
+                max_length=self.max_length
+            )
+            raise ValidationError(
+                {api_settings.NON_FIELD_ERRORS_KEY: [message]}, code="max_length"
+            )
+
+        if self.min_length is not None and len(data) < self.min_length:
+            message = self.error_messages["min_length"].format(
+                min_length=self.min_length
+            )
+            raise ValidationError(
+                {api_settings.NON_FIELD_ERRORS_KEY: [message]}, code="min_length"
+            )
+
+        ret = []
+        errors = []
+
+        for item in data:
+            try:
+                if getattr(self.child, "skipped_errors", False):
+                    import ipdb
+
+                    ipdb.set_trace()
+                validated = self.child.run_validation(item)
+            except ValidationError as exc:
+                err = exc.detail
+            else:
+                ret.append(validated)
+                err = {}
+            if getattr(self.child, "skipped_errors", False):
+                assert isinstance(self.child, CollectSkippedErrorsMixin)
+                err = self.child.merge_serializer_errors(self.child.skipped_errors, err)
+                del self.child.skipped_errors
+            errors.append(err)
+
+        if any(errors):
+            self.skipped_child_errors = errors  # do not raise errors
 
         return ret
 

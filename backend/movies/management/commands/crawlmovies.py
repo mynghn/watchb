@@ -1,5 +1,6 @@
 import os
 from argparse import BooleanOptionalAction
+from itertools import chain
 
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.forms.models import model_to_dict
@@ -146,13 +147,13 @@ class Command(BaseCommand):
                     [
                         model_to_dict(m, fields=["id", "tmdb_id", "kmdb_id", "title"])
                         for m, s in success
-                        if not getattr(s, "skipped_errors", False)
+                        if not s.skipped_errors
                     ]
                 ),
                 ending="\n\n",
             )
             for m, s in success:
-                if skipped_errors := getattr(s, "skipped_errors", False):
+                if s.skipped_errors:
                     self.stdout.write(
                         self.style.SUCCESS(
                             model_to_dict(
@@ -161,7 +162,7 @@ class Command(BaseCommand):
                         ),
                     )
                     self.stdout.write(
-                        self.style.WARNING(f"Skipped errors:\t{skipped_errors}"),
+                        self.style.WARNING(f"Skipped errors:\t{s.skipped_errors}"),
                         ending="\n\n",
                     )
             if any(not m for m, _ in result):
@@ -184,9 +185,19 @@ class Command(BaseCommand):
                         self.stdout.write(
                             self.style.ERROR_OUTPUT(f"Errors:\t{s.errors}")
                         )
+                        if s.skipped_errors:
+                            self.stdout.write(
+                                self.style.WARNING(
+                                    f"Skipped errors:\t{s.skipped_errors}"
+                                )
+                            )
+                        initial_data_to_print = {
+                            k: s.initial_data.get(k, "EMPTY")
+                            for k in chain(s.errors, s.skipped_errors)
+                        }
                         self.stdout.write(
-                            self.style.ERROR_OUTPUT(
-                                f"Initial data:\t{dict((k,s.initial_data.get(k, 'EMPTY')) for k in s.errors.keys())}"
+                            self.style.WARNING(
+                                f"Initial data:\t{initial_data_to_print}"
                             ),
                             ending="\n\n",
                         )
