@@ -123,7 +123,20 @@ User = get_user_model()
 class Rating(CreateAndUpdateModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ratings")
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="ratings")
-    score = models.FloatField(choices=[(n / 2, str(n / 2)) for n in range(11)])
+    score = models.FloatField(
+        choices=[
+            (0.5, "최악이에요"),
+            (1.0, "싫어요"),
+            (1.5, "재미없어요"),
+            (2.0, "별로예요"),
+            (2.5, "부족해요"),
+            (3.0, "보통이에요"),
+            (3.5, "볼만해요"),
+            (4.0, "재미있어요"),
+            (4.5, "훌륭해요!"),
+            (5.0, "최고예요!"),
+        ]
+    )
 
     class Meta:
         constraints = [
