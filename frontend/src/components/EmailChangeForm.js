@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
+
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 
 import FormInput from "./FormInput";
 
-import store from "../store";
 import { checkEmailPatternAndRedundancy } from "../utils/validators";
 import { changeEmail } from "../api";
 
@@ -22,11 +23,13 @@ const PWD_REJECTED_MSG = "비밀번호가 일치하지 않습니다.";
 
 export default function EmailChangeForm({ onSuccess }) {
   const [isPwdRejected, setIsPwdRejected] = useState(null);
-  const {
-    auth: {
-      user: { email },
-    },
-  } = store.getState();
+  const email = useSelector(
+    ({
+      auth: {
+        user: { email },
+      },
+    }) => email
+  );
 
   const checkNew = (newEmail) => {
     const isNew = newEmail !== email;

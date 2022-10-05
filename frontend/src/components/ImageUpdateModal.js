@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
+
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 
-import store from "../store";
 import WarningModal from "./WarningModal";
 
 export default function ImageUpdateModal({
@@ -16,9 +17,7 @@ export default function ImageUpdateModal({
 }) {
   const [show, setShow] = useState(false);
   const [file, setFile] = useState(null);
-  const {
-    auth: { user },
-  } = store.getState();
+  const user = useSelector(({ auth: { user } }) => user);
 
   const handleChange = (e) => {
     const {

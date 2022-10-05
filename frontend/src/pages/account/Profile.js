@@ -2,16 +2,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 
-import store from "../../store";
 import UserSettingsModal from "../../components/UserSettingsModal";
+import { useSelector } from "react-redux";
 
 export default function Profile() {
   const navigate = useNavigate();
-  const {
-    auth: {
-      user: { username, profile, avatar, background },
-    },
-  } = store.getState();
+  const { username, profile, avatar, background } = useSelector(
+    ({ auth: { user } }) => user
+  );
   const { pathname } = useLocation();
 
   return (
