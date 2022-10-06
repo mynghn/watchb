@@ -6,8 +6,8 @@ import unicodedata
 from dataclasses import field
 from typing import Optional
 
+from dataclass_mixins import EmptyStringToNoneMixin, NestedInitMixin
 from decorators import flexible_dataclass, lazy_load_property
-from mixins.dataclass import EmptyStringToNoneMixin, NestedInitMixin
 
 from .validators import validate_kmdb_text
 
