@@ -13,12 +13,6 @@ from django.core.validators import (
     MinValueValidator,
     RegexValidator,
 )
-from mixins.serializer import (
-    GetOrSaveMixin,
-    NestedCreateMixin,
-    RequiredTogetherMixin,
-    SkipFieldsMixin,
-)
 from rest_framework import ISO_8601
 from rest_framework.serializers import (
     CharField,
@@ -33,7 +27,13 @@ from rest_framework.serializers import (
 from rest_framework.settings import api_settings
 from rest_framework.validators import UniqueValidator
 
-from serializers import SkipChildsListSerializer
+from serializers import (
+    GetOrSaveMixin,
+    NestedCreateMixin,
+    RequiredTogetherMixin,
+    SkipChildsListSerializer,
+    SkipFieldsMixin,
+)
 
 from ..models import Country, Credit, Genre, Movie, Person, Poster, Still, Video
 from .utils import ISO_3166_1
