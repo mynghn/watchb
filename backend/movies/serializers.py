@@ -1,4 +1,15 @@
+from collections import OrderedDict
+from typing import Mapping
+
+from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import ValidationError
+from rest_framework.fields import ChoiceField
+from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer
+from rest_framework.settings import api_settings
+
+from serializers import UseIndexedListSerializerMixin
 
 from .models import (
     Blocklist,
@@ -110,6 +121,50 @@ class RatingUpdateSerializer(ModelSerializer):
         ] + RatingCreateSerializer.Meta.read_only_fields
 
 
+User = get_user_model()
+
+
+class RatingListSerializer(UseIndexedListSerializerMixin, ModelSerializer):
+    default_error_messages = {
+        **ModelSerializer.default_error_messages,
+        "undefined": _(
+            "Query key not allowed. Expected one of {valid_keys}, but got {invalid_keys}."
+        ),
+    }
+
+    user = PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
+    score = ChoiceField(Rating._meta.get_field("score").choices, required=False)
+
+    class Meta:
+        model = Rating
+        fields = [f.name for f in Rating._meta.fields]
+        # TODO: advanced search w/ read_only_fields
+        read_only_fields = ["created_at", "updated_at"]
+
+        indexable_fields = ("user", "movie", "score")
+
+    def validate_query_string(self, query_params: Mapping):
+        if isinstance(query_params, Mapping):
+            defined_query_keys = {
+                fname for fname, field in self.fields.items() if not field.read_only
+            }
+            unexpected_query_keys = [
+                qkey for qkey in query_params.keys() if qkey not in defined_query_keys
+            ]
+            if unexpected_query_keys:
+                message = self.error_messages["undefined"].format(
+                    valid_keys=defined_query_keys, invalid_keys=unexpected_query_keys
+                )
+                raise ValidationError(
+                    {api_settings.NON_FIELD_ERRORS_KEY: [message]}, code="undefined"
+                )
+
+    def to_internal_value(self, data: Mapping) -> OrderedDict:
+        self.validate_query_string(query_params=data)
+        return super().to_internal_value(data)
+
+
 class ReviewCreateSerializer(ModelSerializer):
     class Meta:
         model = Review
@@ -123,6 +178,46 @@ class ReviewUpdateSerializer(ModelSerializer):
             "user",
             "movie",
         ] + ReviewCreateSerializer.Meta.read_only_fields
+
+
+class ReviewListSerializer(UseIndexedListSerializerMixin, ModelSerializer):
+    default_error_messages = {
+        **ModelSerializer.default_error_messages,
+        "undefined": _(
+            "Query key not allowed. Expected one of {valid_keys}, but got {invalid_keys}."
+        ),
+    }
+
+    user = PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
+
+    class Meta:
+        model = Review
+        fields = [f.name for f in Review._meta.fields]
+        # TODO: advanced search w/ read_only_fields
+        read_only_fields = ["created_at", "updated_at", "comment"]
+
+        indexable_fields = ("user", "movie", "has_spoiler")
+
+    def validate_query_string(self, query_params: Mapping):
+        if isinstance(query_params, Mapping):
+            defined_query_keys = {
+                fname for fname, field in self.fields.items() if not field.read_only
+            }
+            unexpected_query_keys = [
+                qkey for qkey in query_params.keys() if qkey not in defined_query_keys
+            ]
+            if unexpected_query_keys:
+                message = self.error_messages["undefined"].format(
+                    valid_keys=defined_query_keys, invalid_keys=unexpected_query_keys
+                )
+                raise ValidationError(
+                    {api_settings.NON_FIELD_ERRORS_KEY: [message]}, code="undefined"
+                )
+
+    def to_internal_value(self, data: Mapping) -> OrderedDict:
+        self.validate_query_string(query_params=data)
+        return super().to_internal_value(data)
 
 
 class WishlistCreateSerializer(ModelSerializer):

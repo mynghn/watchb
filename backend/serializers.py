@@ -1,15 +1,16 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from itertools import chain
 from typing import Any, Container, Iterable, Mapping, Optional, Type
 
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Model, UniqueConstraint
+from django.db.models import Manager, Model, UniqueConstraint
 from django.db.models.fields.related import RelatedField
 from django.forms.models import model_to_dict
 from drf_writable_nested.mixins import NestedCreateMixin
 from rest_framework.fields import SkipField, get_error_detail, set_value
 from rest_framework.serializers import (
+    LIST_SERIALIZER_KWARGS,
     BaseSerializer,
     ListSerializer,
     Serializer,
@@ -17,6 +18,7 @@ from rest_framework.serializers import (
 )
 from rest_framework.settings import api_settings
 from rest_framework.utils.html import is_html_input, parse_html_list
+from rest_framework.utils.serializer_helpers import ReturnDict, ReturnList
 
 from decorators import lazy_load_property
 
@@ -411,3 +413,93 @@ class NestedCreateMixin(NestedCreateMixin):
 
 class SkipChildsListSerializer(SkipChildsMixin, ListSerializer):
     pass
+
+
+class IndexedListSerializer(ListSerializer):
+    def __init__(self, *args, **kwargs):
+        index_key = kwargs.pop("index_key")
+        super().__init__(*args, **kwargs)
+        if index_key and index_key not in (
+            indexable_fields := self.child.Meta.indexable_fields
+            if hasattr(self.child, "Meta")
+            and hasattr(self.child.Meta, "indexable_fields")
+            else {f.source for f in self.child._readable_fields}
+        ):
+            raise ValueError(
+                f"index_key '{index_key}' not in indexable_fields {indexable_fields}"
+            )
+        self.index_key = index_key
+
+    def to_representation(self, data):
+        """
+        List of object instances -> List of dicts of primitive datatypes.
+        """
+        # Dealing with nested relationships, data can be a Manager,
+        # so, first get a queryset from the Manager if needed
+        iterable = data.all() if isinstance(data, Manager) else data
+        if self.index_key:
+            idx_representation = {
+                "index_key": self.index_key,
+                "results": defaultdict(list),
+            }
+            for item in iterable:
+                if isinstance(item, Model):
+                    if hasattr(item, self.index_key):
+                        idx_field = getattr(item, self.index_key)
+                        if isinstance(idx_field, Model):
+                            idx_key = idx_field.pk  # use related model pk as index
+                        else:
+                            idx_key = idx_field
+                    else:
+                        raise ValueError(
+                            f"Cannot find index key '{self.index_key}' in model '{item.__class__.__name__}' attributes"
+                        )
+                else:
+                    if self.index_key in item.keys():
+                        idx_key = item[self.index_key]
+                    else:
+                        raise ValueError(
+                            f"Cannot find index key '{self.index_key}' in mapping {item} keys"
+                        )
+                idx_representation["results"][idx_key].append(
+                    self.child.to_representation(item)
+                )
+            return idx_representation
+        else:
+            return [self.child.to_representation(item) for item in iterable]
+
+    @property
+    def data(self):
+        ret = super(ListSerializer, self).data
+        if isinstance(ret, dict):
+            return ReturnDict(ret, serializer=self)
+        elif isinstance(ret, list):
+            return ReturnList(ret, serializer=self)
+
+
+class UseIndexedListSerializerMixin:
+    @classmethod
+    def many_init(cls, *args, **kwargs):
+        index_key = kwargs.pop("index_key", None)
+        allow_empty = kwargs.pop("allow_empty", None)
+        max_length = kwargs.pop("max_length", None)
+        min_length = kwargs.pop("min_length", None)
+        child_serializer = cls(*args, **kwargs)
+        list_kwargs = {
+            "child": child_serializer,
+        }
+        list_kwargs["index_key"] = index_key
+        if allow_empty is not None:
+            list_kwargs["allow_empty"] = allow_empty
+        if max_length is not None:
+            list_kwargs["max_length"] = max_length
+        if min_length is not None:
+            list_kwargs["min_length"] = min_length
+        list_kwargs.update(
+            {
+                key: value
+                for key, value in kwargs.items()
+                if key in LIST_SERIALIZER_KWARGS
+            }
+        )
+        return IndexedListSerializer(*args, **list_kwargs)
