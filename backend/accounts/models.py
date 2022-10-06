@@ -6,6 +6,7 @@ from abstract_models import TimestampModel
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.validators import MinLengthValidator
 from django.db import models
+from django.db.models import F, Q
 
 
 class UserManager(UserManager):
@@ -45,20 +46,31 @@ class User(AbstractUser):
         max_length=7, choices=VISIBILITY_CHOICES, default=PUBLIC_OPTION[0]
     )
 
+    followings = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        through="Follow",
+        through_fields=("follower", "following"),
+        related_name="followers",
+    )
+
     objects = UserManager()
 
 
 class Follow(TimestampModel):
     following = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="followings"
+        User, on_delete=models.CASCADE, related_name="follows"
     )
     follower = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="followers"
+        User, on_delete=models.CASCADE, related_name="followed"
     )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["following", "follower"], name="one_follow_between_users"
-            )
+            ),
+            models.CheckConstraint(
+                check=~Q(following=F("follower")), name="no_self_follow"
+            ),
         ]
