@@ -6,12 +6,14 @@ from collections import defaultdict
 from typing import Any, DefaultDict, Iterable, Literal, Optional, Type
 from zlib import error as zlib_error
 
-from requests.exceptions import ContentDecodingError, HTTPError
 from tqdm import tqdm
 from urllib3.exceptions import DecodeError
 
-from ..crawlers.agents import KMDbAPIAgent, TMDBAPIAgent
-from ..crawlers.custom_types import (
+from requests.exceptions import ContentDecodingError, HTTPError
+
+from ...models import Credit, Movie, Person
+from ..agents import KMDbAPIAgent, TMDBAPIAgent
+from ..custom_types import (
     EnglishName,
     MovieFromAPI,
     MovieFromKMDb,
@@ -21,10 +23,9 @@ from ..crawlers.custom_types import (
     SerializedPersonFromAPI,
     SimpleMovieFromTMDB,
 )
-from ..crawlers.interface import APICrawler, ListAndDetailCrawler
-from ..crawlers.serializers import MovieFromAPISerializer, PersonFromAPISerializer
-from ..crawlers.validators import validate_kmdb_text
-from ..models import Credit, Movie, Person
+from ..interface import APICrawler, ListAndDetailCrawler
+from ..serializers import MovieFromAPISerializer, PersonFromAPISerializer
+from ..validators import validate_kmdb_text
 
 
 class PopularListMixin(ListAndDetailCrawler):

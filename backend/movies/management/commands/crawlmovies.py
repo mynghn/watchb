@@ -5,7 +5,7 @@ from itertools import chain
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.forms.models import model_to_dict
 
-from ...mixins import crawler as crawler_mixins
+from ...crawlers.mixins import crawler as crawler_mixins
 from ...models import Movie
 
 

@@ -1,4 +1,4 @@
-from ..mixins.crawler import (
+from .mixins.crawler import (
     ComplementaryDetailMixin,
     KMDbAgentInitMixin,
     PopularListMixin,

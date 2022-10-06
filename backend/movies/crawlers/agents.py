@@ -9,7 +9,7 @@ from decorators import lazy_load_property
 from retrying import Retrying
 
 from ..crawlers import custom_types as T
-from ..mixins.api import RequestPaginateMixin, SingletonRequestSessionMixin
+from .mixins.requests import RequestPaginateMixin, SingletonRequestSessionMixin
 
 
 class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
