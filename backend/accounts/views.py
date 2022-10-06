@@ -1,21 +1,17 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import action
-from rest_framework.mixins import (
-    CreateModelMixin,
-    ListModelMixin,
-    RetrieveModelMixin,
-    UpdateModelMixin,
-)
+from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, UpdateModelMixin
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.serializers import Serializer
 from rest_framework.status import HTTP_200_OK, HTTP_204_NO_CONTENT
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+from views import SearchAndListModelMixin
 
 from .permissions import IsSelfOrAdmin
 from .serializers import (
@@ -33,12 +29,15 @@ User = get_user_model()
 
 
 class UserViewSet(
+    SearchAndListModelMixin,
     UpdateModelMixin,
     CreateModelMixin,
     RetrieveModelMixin,
-    ListModelMixin,
     GenericViewSet,
 ):
+    queryset = User.objects.all()
+    qstring_serializer_class = UserListSerializer
+
     def get_serializer_class(self):
         if self.action == "create" or (self.action == "metadata" and not self.detail):
             return SignUpSerializer
@@ -46,8 +45,6 @@ class UserViewSet(
             return UserUpdateSerializer
         elif self.action == "retrieve":
             return UserRetrieveSerializer
-        elif self.action == "list":
-            return UserListSerializer
         elif self.action == "avatar":
             return UserAvatarUpdateSerializer
         elif self.action == "background":
@@ -58,7 +55,7 @@ class UserViewSet(
             elif self.request.method == "PATCH":
                 return UserFollowingsPartialUpdateSerializer
         else:
-            return Serializer
+            return super().get_serializer_class()
 
     def get_permissions(self):
         if self.action in ("create", "list"):
@@ -78,16 +75,6 @@ class UserViewSet(
                 return [IsSelfOrAdmin()]
         else:
             return super().get_permissions()
-
-    def get_queryset(self):
-        if self.action == "list":
-            user_search_serializer = self.get_serializer(
-                data=self.request.query_params.dict()
-            )
-            user_search_serializer.is_valid(raise_exception=True)
-            return User.objects.filter(**user_search_serializer.validated_data)
-        else:
-            return User.objects.all()
 
     @action(detail=True, methods=["POST", "DELETE"])
     def avatar(self, request: Request, *args, **kwargs) -> Response:

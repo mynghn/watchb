@@ -2,14 +2,10 @@ from accounts.permissions import IsAuthorOrAdmin
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, UpdateModelMixin
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.request import Request
-from rest_framework.response import Response
-from rest_framework.serializers import Serializer
 from rest_framework.viewsets import GenericViewSet
 
 from movies.models import Blocklist, Movie, Rating, Review, Wishlist
-from serializers import IndexedListSerializer
-from views import CollectUserFromRequestMixin
+from views import CollectUserFromRequestMixin, SearchAndIndexModelMixin
 
 from .serializers import (
     BlocklistCreateSerializer,
@@ -31,12 +27,16 @@ class MovieRetrieveView(RetrieveAPIView):
 
 
 class RatingViewSet(
+    SearchAndIndexModelMixin,
     CollectUserFromRequestMixin,
     CreateModelMixin,
     UpdateModelMixin,
     DestroyModelMixin,
     GenericViewSet,
 ):
+    queryset = Rating.objects.all()
+    qstring_serializer_class = RatingListSerializer
+
     def get_permissions(self):
         if self.action == "create":
             return [IsAuthenticated()]
@@ -52,45 +52,21 @@ class RatingViewSet(
             return RatingCreateSerializer
         elif self.action in ("update", "partial_update"):
             return RatingUpdateSerializer
-        elif self.action == "list":
-            return RatingListSerializer
         else:
-            return Serializer
-
-    def get_queryset(self):
-        if self.action == "list":
-            query_params_data = self.request.query_params.dict()
-            query_params_data.pop("index_key", None)
-            rating_search_serializer = self.get_serializer(data=query_params_data)
-            rating_search_serializer.is_valid(raise_exception=True)
-            return Rating.objects.filter(**rating_search_serializer.validated_data)
-        else:
-            return Rating.objects.all()
-
-    # TODO: pagination
-    def list(self, request: Request, *args, **kwargs) -> Response:
-        queryset = self.filter_queryset(self.get_queryset())
-
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer: IndexedListSerializer = self.get_serializer(
-            queryset,
-            many=True,
-            index_key=self.request.query_params.get("index_key"),
-        )
-        return Response(serializer.data)
+            return super().get_serializer_class()
 
 
 class ReviewViewSet(
+    SearchAndIndexModelMixin,
     CollectUserFromRequestMixin,
     CreateModelMixin,
     UpdateModelMixin,
     DestroyModelMixin,
     GenericViewSet,
 ):
+    queryset = Review.objects.all()
+    qstring_serializer_class = ReviewListSerializer
+
     def get_permissions(self):
         if self.action == "create":
             return [IsAuthenticated()]
@@ -106,36 +82,8 @@ class ReviewViewSet(
             return ReviewCreateSerializer
         elif self.action in ("update", "partial_update"):
             return ReviewUpdateSerializer
-        elif self.action == "list":
-            return ReviewListSerializer
         else:
-            return Serializer
-
-    def get_queryset(self):
-        if self.action == "list":
-            query_params_data = self.request.query_params.dict()
-            query_params_data.pop("index_key", None)
-            review_search_serializer = self.get_serializer(data=query_params_data)
-            review_search_serializer.is_valid(raise_exception=True)
-            return Review.objects.filter(**review_search_serializer.validated_data)
-        else:
-            return Review.objects.all()
-
-    # TODO: pagination
-    def list(self, request: Request, *args, **kwargs) -> Response:
-        queryset = self.filter_queryset(self.get_queryset())
-
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer: IndexedListSerializer = self.get_serializer(
-            queryset,
-            many=True,
-            index_key=self.request.query_params.get("index_key"),
-        )
-        return Response(serializer.data)
+            return super().get_serializer_class()
 
 
 class WishlistViewSet(
