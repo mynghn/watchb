@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Manager, Model, UniqueConstraint
 from django.db.models.fields.related import RelatedField
 from django.forms.models import model_to_dict
+from django.utils.translation import gettext_lazy as _
 from drf_writable_nested.mixins import NestedCreateMixin
 from rest_framework.fields import SkipField, get_error_detail, set_value
 from rest_framework.serializers import (
@@ -503,3 +504,35 @@ class UseIndexedListSerializerMixin:
             }
         )
         return IndexedListSerializer(*args, **list_kwargs)
+
+
+class QueryStringValidateMixin:
+    qstr_err_code = "undefined_query_key"
+    qstr_err_msg = _(
+        "Query key not allowed. Expected one of {valid_keys}, but got {invalid_keys}."
+    )
+
+    def validate_query_string(self, query_params: Mapping):
+        if isinstance(query_params, Mapping):
+            defined_query_keys = {
+                fname for fname, field in self.fields.items() if not field.read_only
+            }
+            unexpected_query_keys = [
+                qkey for qkey in query_params.keys() if qkey not in defined_query_keys
+            ]
+            if unexpected_query_keys:
+                raise ValidationError(
+                    {
+                        api_settings.NON_FIELD_ERRORS_KEY: [
+                            self.qstr_err_msg.format(
+                                valid_keys=defined_query_keys,
+                                invalid_keys=unexpected_query_keys,
+                            )
+                        ]
+                    },
+                    code=self.qstr_err_code,
+                )
+
+    def to_internal_value(self, data: Mapping) -> OrderedDict:
+        self.validate_query_string(query_params=data)
+        return super().to_internal_value(data)
