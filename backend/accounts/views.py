@@ -22,8 +22,10 @@ from .serializers import (
     SignUpSerializer,
     UserAvatarUpdateSerializer,
     UserBackgroundUpdateSerializer,
-    UserDetailSerializer,
+    UserFollowingsPartialUpdateSerializer,
+    UserFollowingsRetrieveAndUpdateSerializer,
     UserListSerializer,
+    UserRetrieveSerializer,
     UserUpdateSerializer,
 )
 
@@ -43,21 +45,37 @@ class UserViewSet(
         elif self.action in ("update", "partial_update"):
             return UserUpdateSerializer
         elif self.action == "retrieve":
-            return UserDetailSerializer
+            return UserRetrieveSerializer
         elif self.action == "list":
             return UserListSerializer
         elif self.action == "avatar":
             return UserAvatarUpdateSerializer
         elif self.action == "background":
             return UserBackgroundUpdateSerializer
+        elif self.action == "followings":
+            if self.request.method in ("GET", "PUT"):
+                return UserFollowingsRetrieveAndUpdateSerializer
+            elif self.request.method == "PATCH":
+                return UserFollowingsPartialUpdateSerializer
         else:
             return Serializer
 
     def get_permissions(self):
         if self.action in ("create", "list"):
             return [AllowAny()]
-        elif self.action in ("retrieve", "update", "partial_update"):
+        elif self.action in (
+            "retrieve",
+            "update",
+            "partial_update",
+            "avatar",
+            "background",
+        ):
             return [IsSelfOrAdmin()]
+        elif self.action == "followings":
+            if self.request.method == "GET":
+                return [IsAuthenticated()]
+            elif self.request.method in ("PUT", "PATCH"):
+                return [IsSelfOrAdmin()]
         else:
             return super().get_permissions()
 
@@ -86,6 +104,13 @@ class UserViewSet(
         elif self.request.method == "DELETE":
             self.get_object().background.delete()
             return Response(status=HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["GET", "PUT", "PATCH"])
+    def followings(self, request: Request, *args, **kwargs) -> Response:
+        if self.request.method == "GET":
+            return self.retrieve(request, *args, **kwargs)
+        elif self.request.method in ("PUT", "PATCH"):
+            return self.update(request, *args, **kwargs)
 
 
 class JWTResponseMixin:

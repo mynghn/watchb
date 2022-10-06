@@ -4,8 +4,10 @@ from typing import Any, Mapping
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.utils.translation import gettext_lazy as _
+from fields import ModelSerializePrimaryKeyRelatedField
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import CharField, EmailField, ImageField, IntegerField
+from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer
 from rest_framework.settings import api_settings
 
@@ -121,12 +123,12 @@ class UserBackgroundUpdateSerializer(ModelSerializer):
     background = ImageField(max_length=100)
 
 
-class UserDetailSerializer(ModelSerializer):
+class UserRetrieveSerializer(ModelSerializer):
     # Receives user_id from url and JWT from request header -> no need to receive any fields from payload
     class Meta:
         model = User
         fields = USER_INFO_FIELDS
-        read_only_fields = USER_INFO_FIELDS
+        read_only_fields = fields
 
 
 class UserListSerializer(ModelSerializer):
@@ -171,3 +173,51 @@ class UserListSerializer(ModelSerializer):
     def to_internal_value(self, data: Mapping) -> OrderedDict:
         self.validate_query_string(query_params=data)
         return super().to_internal_value(data)
+
+
+class FollowUserSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "avatar"]
+        read_only_fields = fields
+
+
+class UserFollowingsRetrieveAndUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "followings", "followers"]
+        read_only_fields = ["username"]
+
+    followings = ModelSerializePrimaryKeyRelatedField(
+        many=True,
+        required=False,
+        queryset=User.objects.all(),
+        model_serializer_class=FollowUserSerializer,
+    )
+    followers = FollowUserSerializer(many=True, read_only=True)
+
+    def validate_followings(self, value: list[User]) -> list[User]:
+        if isinstance(self.instance, User) and self.instance in value:
+            raise ValidationError("User can't follow oneself.", code="no-self-follow")
+        return value
+
+
+class UserFollowingsPartialUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "followings", "followers", "following"]
+        read_only_fields = ["username"]
+
+    followings = FollowUserSerializer(many=True, read_only=True)
+    followers = FollowUserSerializer(many=True, read_only=True)
+
+    following = PrimaryKeyRelatedField(queryset=User.objects.all(), write_only=True)
+
+    def validate_following(self, value: User) -> User:
+        if isinstance(self.instance, User) and self.instance == value:
+            raise ValidationError("User can't follow oneself.", code="no-self-follow")
+        return value
+
+    def update(self, instance: User, validated_data: dict[str, User]) -> User:
+        instance.followings.add(validated_data.pop("following"))
+        return instance
