@@ -78,6 +78,7 @@ class MovieRetrieveSerializer(ModelSerializer):
         fields = [
             "id",
             "title",
+            "original_title",
             "release_date",
             "production_year",
             "running_time",

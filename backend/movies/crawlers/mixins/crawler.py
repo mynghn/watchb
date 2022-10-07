@@ -124,6 +124,9 @@ class TMDBSerializeMixin(FieldLevelSerializeMixin):
     def serialize_title(self, movie_fetched: MovieFromTMDB, **kwargs) -> str:
         return movie_fetched.title
 
+    def serialize_original_title(self, movie_fetched: MovieFromTMDB, **kwargs) -> str:
+        return movie_fetched.original_title
+
     def serialize_release_date(
         self, movie_fetched: MovieFromTMDB, **kwargs
     ) -> Optional[str]:
@@ -330,6 +333,9 @@ class KMDbSerializeMixin(FieldLevelSerializeMixin):
     def serialize_title(self, movie_fetched: MovieFromKMDb, **kwargs) -> str:
         return movie_fetched.title
 
+    def serialize_original_title(self, movie_fetched: MovieFromKMDb, **kwargs) -> str:
+        return movie_fetched.titleOrg
+
     def serialize_release_date(
         self, movie_fetched: MovieFromKMDb, **kwargs
     ) -> Optional[str]:
@@ -471,6 +477,7 @@ class ComplementaryDetailMixin(
 
     from_tmdb_fields = [
         "tmdb_id",
+        "original_title",
         "synopsys",
         "countries",
         "poster_set",

@@ -8,6 +8,7 @@ class Movie(models.Model):
     kmdb_id = models.CharField(max_length=7, unique=True, null=True, blank=True)
 
     title = models.CharField(max_length=50)
+    original_title = models.CharField(max_length=100, blank=True)
     release_date = models.DateField(null=True, blank=True)
     production_year = models.IntegerField(null=True, blank=True)
     countries = models.ManyToManyField("Country", blank=True)

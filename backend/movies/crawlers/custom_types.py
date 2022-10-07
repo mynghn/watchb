@@ -94,6 +94,7 @@ class GenreFromTMDB:
 class SimpleMovieFromTMDB:
     id: int
     title: str
+    original_title: str = ""
 
 
 @flexible_dataclass
@@ -106,7 +107,7 @@ class MovieFromTMDB(NestedInitMixin, EmptyStringToNoneMixin):
     videos: MovieVideosFromTMDB
     credits: MovieCreditsFromTMDB
     kr_release_dates: list[ReleaseDateFromTMDB]
-    original_title: Optional[str] = None
+    original_title: str = ""
     runtime: Optional[int] = None
     overview: Optional[str] = None
 
@@ -172,7 +173,7 @@ class MovieFromKMDb(NestedInitMixin, EmptyStringToNoneMixin):
     nation: Optional[str] = None
     prodYear: Optional[str] = None
     titleEng: Optional[str] = None
-    titleOrg: Optional[str] = None
+    titleOrg: str = ""
     repRlsDate: Optional[str] = None
     runtime: Optional[str] = None
     genre: Optional[str] = None
