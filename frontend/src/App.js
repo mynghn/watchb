@@ -4,7 +4,9 @@ import { useEffect } from "react";
 import NavBar from "./components/NavBar";
 import Home from "./pages/Home";
 import Profile from "./pages/account/Profile";
+import MovieDetailsPage from "./pages/movies/MovieDetailsPage";
 import BottomBar from "./components/BottomBar";
+
 import { useDispatch, useSelector } from "react-redux";
 import { refreshJWT, retrieveUser } from "./api";
 import { login, setUser } from "./store";
@@ -28,7 +30,7 @@ function WatchB() {
         dispatch(login());
       });
   };
-  useEffect(silentLogin, []);
+  useEffect(silentLogin, [dispatch]);
   return (
     <div className="App">
       <NavBar
@@ -40,6 +42,7 @@ function WatchB() {
         <Routes>
           <Route path="" element={<Home />}></Route>
           <Route path="users/:username" element={<Profile />}></Route>
+          <Route path="movies/:movieId" element={<MovieDetailsPage />}></Route>
         </Routes>
       </div>
       <BottomBar height={BOTTOM_BAR_HEIGHT} fontsize={BOTTOM_BAR_FONTSIZE} />
