@@ -1,12 +1,13 @@
 import Axios from "axios";
 import jwtDecode from "jwt-decode";
-import store, { login, setToken, setUser } from "./store";
+import store, { login, setToken, setUser, setMovie } from "./store";
 
 export const BACKEND_HOST = process.env.REACT_APP_BACKEND_HOST;
 export const JWT_EXPIRY_TIME =
   parseInt(process.env.REACT_APP_JWT_EXPIRY_TIME) || 1000 * 60 * 5;
 
 export const USERS_URI = "/api/users/";
+export const MOVIES_URI = "/api/movies/";
 export const OBTAIN_TOKEN_PAIR_URI = "/api/auth/token-pair/obtain/";
 export const REFRESH_TOKEN_PAIR_URI = "/api/auth/token-pair/refresh/";
 export const EXPIRE_REFRESH_TOKEN_URI = "/api/auth/refresh-token/expire/";
@@ -171,3 +172,8 @@ export const deleteBackground = () => {
     store.dispatch(setUser({ background: null }));
   });
 };
+
+export const retrieveMovie = (movieId) =>
+  axios
+    .get(`${MOVIES_URI}${movieId}/`)
+    .then(({ data }) => store.dispatch(setMovie(data)));
