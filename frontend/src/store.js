@@ -28,6 +28,26 @@ const authSlice = createSlice({
   },
 });
 
-export const { login, setToken, setUser, logout } = authSlice.actions;
+const moviesSlice = createSlice({
+  name: "movies",
+  initialState: {
+    movie: {},
+  },
+  reducers: {
+    setMovie: (state, action) => ({
+      ...state,
+      movie: { ...state.movie, ...action.payload },
+    }),
+    detachMovie: (state) => ({
+      ...state,
+      movie: {},
+    }),
+  },
+});
 
-export default configureStore({ reducer: { auth: authSlice.reducer } });
+export const { login, setToken, setUser, logout } = authSlice.actions;
+export const { setMovie, detachMovie } = moviesSlice.actions;
+
+export default configureStore({
+  reducer: { auth: authSlice.reducer, movies: moviesSlice.reducer },
+});
