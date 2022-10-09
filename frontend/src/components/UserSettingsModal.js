@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -14,7 +14,7 @@ import {
   deleteBackground,
   updateUser,
 } from "../api";
-import store, { logout as reduxLogout } from "../store";
+import { logout as reduxLogout } from "../store";
 
 import EmailChangeForm from "./EmailChangeForm";
 import PasswordChangeForm from "./PasswordChangeForm";
@@ -22,11 +22,7 @@ import ImageUpdateModal from "./ImageUpdateModal";
 import WarningModal from "./WarningModal";
 
 function ProfilesUpdateModal() {
-  const {
-    auth: {
-      user: { username, profile },
-    },
-  } = store.getState();
+  const { username, profile } = useSelector(({ auth: { user } }) => user);
 
   const [show, setShow] = useState(false);
   const [usernameInput, setUsernameInput] = useState(username);
@@ -193,11 +189,13 @@ function PasswordChangeModal() {
 }
 
 function VisibilitySettingModal() {
-  const {
-    auth: {
-      user: { visibility: currVisibility },
-    },
-  } = store.getState();
+  const currVisibility = useSelector(
+    ({
+      auth: {
+        user: { visibility },
+      },
+    }) => visibility
+  );
   const [show, setShow] = useState(false);
   const showModal = () => setShow(true);
   const hideModal = () => setShow(false);
