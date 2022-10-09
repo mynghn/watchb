@@ -40,3 +40,15 @@ def validate_kmdb_text(text: str) -> str:
     cleansed = re.sub(r"\s?(!HS|!HE)\s?", "", text)  # invalid characters from KMDb
     cleansed = re.sub(r"\s+", " ", cleansed)
     return cleansed.strip()
+
+
+def get_person_en_name_regex():
+    western_alphabets = r"a-zA-Z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F\u1E00-\u1EFF"
+    name_chunk = rf"[{western_alphabets}0-9]['’]?[{western_alphabets}0-9]*[.,]?"
+    last_name_chunk = rf"{name_chunk}[!]?"
+    name_chunk = rf"({name_chunk}|'{name_chunk}'|\"{name_chunk}\")"
+    last_name_chunk = rf"({last_name_chunk}|'{last_name_chunk}'|\"{last_name_chunk}\")"
+    return rf"^({name_chunk}[ ])*{last_name_chunk}$"
+
+
+PERSON_EN_NAME_REGEX = get_person_en_name_regex()

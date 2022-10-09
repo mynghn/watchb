@@ -37,7 +37,12 @@ from serializers import (
 
 from ..models import Country, Credit, Genre, Movie, Person, Poster, Still, Video
 from .utils import ISO_3166_1
-from .validators import CountryCodeValidator, OnlyKoreanValidator, validate_kmdb_text
+from .validators import (
+    PERSON_EN_NAME_REGEX,
+    CountryCodeValidator,
+    OnlyKoreanValidator,
+    validate_kmdb_text,
+)
 
 
 class GenreGetOrSaveSerializer(GetOrSaveMixin, ModelSerializer):
@@ -144,9 +149,6 @@ class VideoSerializer(ModelSerializer):
     )
 
 
-western_alphabets = r"a-zA-Z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F\u1E00-\u1EFF"
-
-
 class PersonGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer):
     class Meta:
         model = Person
@@ -156,7 +158,7 @@ class PersonGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer
             "kmdb_id": {"fmt": RegexValidator(regex=r"^[0-9]{8}$")},
             "en_name": {
                 "en": RegexValidator(
-                    regex=rf"^(([']?[{western_alphabets}][']?)+[.]?['\- ]?)*([']?[{western_alphabets}0-9][']?)+[.]?$",
+                    regex=PERSON_EN_NAME_REGEX,
                     message="Invalid Person en_name '%(value)s' encountered.",
                 )
             },
