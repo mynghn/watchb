@@ -46,8 +46,9 @@
 ### Backend
 
 - [x] user authentication
-- [x] user follow
 - [x] movies crawling &rarr; deserialize & register
+- [x] user follow
+- [x] user update API
 - [x] user &lrarr; movie interactions
 - [ ] search
 - [ ] recommendation
@@ -60,7 +61,7 @@
   - [x] profile update
 - [ ] movies domain
   - [ ] detail page
-  - Many more...
+  - [ ] many more...
 - [ ] overall CSS styling
 
 <!-- CONTACT -->
@@ -73,7 +74,7 @@ Lee Myounghoon - l.mynghn@gmail.com
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
 [django]: https://img.shields.io/badge/Django-44B78B?style=for-the-badge&logo=django&logoColor=092E20
-[django-url]: https://reactjs.org/
+[django-url]: https://www.djangoproject.com/
 [drf]: https://img.shields.io/badge/Django%20Rest%20framework-2C2C2C?style=for-the-badge&logo=django&logoColor=A30000
 [drf-url]: https://www.django-rest-framework.org/
 [react.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
