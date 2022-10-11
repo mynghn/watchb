@@ -28,7 +28,7 @@ from rest_framework.settings import api_settings
 from rest_framework.validators import UniqueValidator
 
 from serializers import (
-    GetOrSaveMixin,
+    CreateOrMergeWithDataMixin,
     NestedCreateMixin,
     RequiredTogetherMixin,
     SkipChildsListSerializer,
@@ -45,7 +45,7 @@ from .validators import (
 )
 
 
-class GenreGetOrSaveSerializer(GetOrSaveMixin, ModelSerializer):
+class GenreCreateOrMergeSerializer(CreateOrMergeWithDataMixin, ModelSerializer):
     class Meta:
         model = Genre
         fields = "__all__"
@@ -55,7 +55,7 @@ class GenreGetOrSaveSerializer(GetOrSaveMixin, ModelSerializer):
     name = CharField(max_length=10, validators=[Meta.custom_validators["name"]["ko"]])
 
 
-class CountryGetOrSaveSerializer(GetOrSaveMixin, ModelSerializer):
+class CountryCreateOrMergeSerializer(CreateOrMergeWithDataMixin, ModelSerializer):
     alpha_2 = CharField(max_length=2, required=False)
     name = CharField(max_length=17, required=False)
 
@@ -149,7 +149,9 @@ class VideoSerializer(ModelSerializer):
     )
 
 
-class PersonGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer):
+class PersonCreateOrMergeSerializer(
+    SkipFieldsMixin, CreateOrMergeWithDataMixin, ModelSerializer
+):
     class Meta:
         model = Person
         fields = "__all__"
@@ -199,8 +201,8 @@ class PersonGetOrSaveSerializer(SkipFieldsMixin, GetOrSaveMixin, ModelSerializer
 
 
 @validate_fields(fields=["name", "en_name"], validator=validate_kmdb_text)
-class PersonFromAPISerializer(RequiredTogetherMixin, PersonGetOrSaveSerializer):
-    class Meta(PersonGetOrSaveSerializer.Meta):
+class PersonFromAPISerializer(RequiredTogetherMixin, PersonCreateOrMergeSerializer):
+    class Meta(PersonCreateOrMergeSerializer.Meta):
         fields = None
         exclude = ["id"]
         required_together_fields = ["tmdb_id", "kmdb_id"]
@@ -219,7 +221,7 @@ class PersonFromAPISerializer(RequiredTogetherMixin, PersonGetOrSaveSerializer):
 class CreditSerializer(SkipFieldsMixin, NestedCreateMixin, ModelSerializer):
 
     movie = PrimaryKeyRelatedField(queryset=Movie.objects.all(), required=False)
-    person = PersonGetOrSaveSerializer()
+    person = PersonCreateOrMergeSerializer()
     role_name = CharField(
         max_length=200, required=False, allow_blank=True, trim_whitespace=True
     )
@@ -303,8 +305,8 @@ class MovieRegisterSerializer(SkipFieldsMixin, NestedCreateMixin, ModelSerialize
         validators=[Meta.custom_validators["running_time"]["min_value"]],
     )
     # m-to-m
-    countries = CountryGetOrSaveSerializer(many=True, required=False)
-    genres = GenreGetOrSaveSerializer(many=True, required=False)
+    countries = CountryCreateOrMergeSerializer(many=True, required=False)
+    genres = GenreCreateOrMergeSerializer(many=True, required=False)
     credits = CreditSerializer(many=True, allow_empty=False)  # w/ through model
     # 1-to-m
     poster_set = PosterSerializer(many=True, required=False)

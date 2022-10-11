@@ -24,7 +24,7 @@ from rest_framework.utils.serializer_helpers import ReturnDict, ReturnList
 from decorators import lazy_load_property
 
 
-class GetOrSaveMixin:
+class CreateOrMergeWithDataMixin:
     def save(self, **kwargs) -> Model:
         self.instance, extra_kwargs = self.search_instance(**self.validated_data)
         self.instance = super().save(**extra_kwargs | kwargs)
