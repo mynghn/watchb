@@ -1,26 +1,27 @@
 import re
 from typing import Any, Optional
 
-from decorators import lazy_load_property
-
 import requests
 
 
 class SingletonRequestSessionMixin:
-    @lazy_load_property
+    @property
     def session(self) -> requests.Session:
-        return requests.Session()
+        if not getattr(self, "_session", False):
+            self.__class__._session = requests.Session()
+        return self._session
 
     @session.deleter
     def session(self):
         self._session.close()
-        del self._session
+        del self.__class__._session
 
     @session.setter
     def session(self, value: Any):
         if isinstance(value, requests.Session):
-            del self.session
-            self._session = value
+            if getattr(self, "_session", False):
+                del self.session
+            self.__class__._session = value
         else:
             raise ValueError("Only requests.Session object is allowed.")
 
