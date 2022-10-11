@@ -26,8 +26,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         **retry_kwargs,
     ):
         self._access_token = access_token
-        self._params = {"language": language, "region": region}
-        self._prepare_session()
+        self._session_params = {"language": language, "region": region}
 
         _wait_exponential_multiplier = retry_kwargs.pop(
             "wait_exponential_multiplier", 1000
@@ -48,11 +47,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
     def _prepare_session(self):
         self.session.headers.update({"Authorization": f"Bearer {self._access_token}"})
-        self.session.params.update(self._params)
-
-    def _refresh_session(self):
-        self.session = requests.Session()
-        self._prepare_session()
+        self.session.params.update(self._session_params)
 
     def _wait_func_factory(
         self,
@@ -62,7 +57,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
     ) -> int:
         def wait_func(attempt_number: int, delay_since_first_attempt_ms: int):
             if attempt_number in session_refresh_attempt_numbers:
-                self._refresh_session()
+                self.refresh_session()
             to_wait = (
                 2 ** (attempt_number) - 1
             ) * wait_exponential_multiplier - delay_since_first_attempt_ms
@@ -243,8 +238,7 @@ class KMDbAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
     ).rstrip("/")
 
     def __init__(self, api_key: str, **retry_kwargs):
-        self._params = {"collection": "kmdb_new2", "ServiceKey": api_key}
-        self._prepare_session()
+        self._session_params = {"collection": "kmdb_new2", "ServiceKey": api_key}
 
         _wait_exponential_multiplier = retry_kwargs.pop(
             "wait_exponential_multiplier", 1000
@@ -264,12 +258,7 @@ class KMDbAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
         )
 
     def _prepare_session(self):
-        self.session.params.update(self._params)
-
-    def _refresh_session(self):
-        del self.session
-        self.session = requests.Session()
-        self._prepare_session()
+        self.session.params.update(self._session_params)
 
     def _wait_func_factory(
         self,
@@ -279,7 +268,7 @@ class KMDbAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
     ) -> int:
         def wait_func(attempt_number: int, delay_since_first_attempt_ms: int):
             if attempt_number in session_refresh_attempt_numbers:
-                self._refresh_session()
+                self.refresh_session()
             to_wait = (
                 2 ** (attempt_number) - 1
             ) * wait_exponential_multiplier - delay_since_first_attempt_ms

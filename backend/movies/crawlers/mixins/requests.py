@@ -9,6 +9,7 @@ class SingletonRequestSessionMixin:
     def session(self) -> requests.Session:
         if not getattr(self, "_session", False):
             self.__class__._session = requests.Session()
+            self._prepare_session()
         return self._session
 
     @session.deleter
@@ -24,6 +25,17 @@ class SingletonRequestSessionMixin:
             self.__class__._session = value
         else:
             raise ValueError("Only requests.Session object is allowed.")
+
+    def _prepare_session(self):
+        """
+        configure session level settings with predefined instance attributes.
+        ex) self.session.headers.update({"Authorization": f"Bearer {self._access_token}"})
+        """
+        raise NotImplementedError
+
+    def refresh_session(self):
+        self.session = requests.Session()
+        self._prepare_session()
 
     def request(self, *args, **kwargs) -> requests.Response:
         response = self.session.request(*args, **kwargs)
