@@ -1,8 +1,9 @@
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
+
+from decorators import lazy_load_property
 
 import requests
-from decorators import lazy_load_property
 
 
 class SingletonRequestSessionMixin:
@@ -66,7 +67,7 @@ class RequestPaginateMixin:
         self,
         response: requests.Response,
         **kwargs,
-    ) -> Tuple[List, bool]:
+    ) -> tuple[list[dict[str, Any]], bool]:
         """
         returns 2-element tuple: (instances, has_next)
         - instances: post-processed instances data from response
@@ -74,14 +75,14 @@ class RequestPaginateMixin:
         """
         raise NotImplementedError
 
-    def paginate(
+    def paginate_request(
         self,
         method: str,
         url: str,
         *,
         max_count: Optional[int] = None,
         **kwargs,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         response = self.request_page(method=method, url=url, **kwargs)
         response_agg, has_next = self.process_response(response, **kwargs)
 

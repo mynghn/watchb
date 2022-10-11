@@ -115,7 +115,9 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
         return [
             T.SimpleMovieFromTMDB(**m)
-            for m in self.paginate(method, self.base_url + uri, max_count=max_count)
+            for m in self.paginate_request(
+                method, self.base_url + uri, max_count=max_count
+            )
         ]
 
     def top_rated_movies(
@@ -126,7 +128,9 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
         return [
             T.SimpleMovieFromTMDB(**m)
-            for m in self.paginate(method, self.base_url + uri, max_count=max_count)
+            for m in self.paginate_request(
+                method, self.base_url + uri, max_count=max_count
+            )
         ]
 
     def now_playing_movies(
@@ -137,7 +141,9 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
         return [
             T.SimpleMovieFromTMDB(**m)
-            for m in self.paginate(method, self.base_url + uri, max_count=max_count)
+            for m in self.paginate_request(
+                method, self.base_url + uri, max_count=max_count
+            )
         ]
 
     def trending_movies(
@@ -148,7 +154,9 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
         return [
             T.SimpleMovieFromTMDB(**m)
-            for m in self.paginate(method, self.base_url + uri, max_count=max_count)
+            for m in self.paginate_request(
+                method, self.base_url + uri, max_count=max_count
+            )
         ]
 
     def search_movies(
@@ -160,7 +168,7 @@ class TMDBAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
         return [
             T.SimpleMovieFromTMDB(**m)
-            for m in self.paginate(
+            for m in self.paginate_request(
                 method, self.base_url + uri, params=params, max_count=max_count
             )
         ]
@@ -334,7 +342,7 @@ class KMDbAPIAgent(RequestPaginateMixin, SingletonRequestSessionMixin):
 
         return [
             T.MovieFromKMDb(**m)
-            for m in self.paginate(
+            for m in self.paginate_request(
                 method, self.base_url + uri, params=search_kwargs, max_count=max_count
             )
         ]
