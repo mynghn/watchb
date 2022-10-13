@@ -26,8 +26,6 @@ class Movie(models.Model):
         max_length=3, choices=FILM_RATING_CHOICES, blank=True
     )
 
-    people = models.ManyToManyField("Person", through="Credit")
-
 
 class Person(models.Model):
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
@@ -38,6 +36,8 @@ class Person(models.Model):
     biography = models.TextField(blank=True)
     avatar_url = models.URLField(blank=True, null=True, unique=True)
 
+    filmography = models.ManyToManyField(Movie, through="Credit", related_name="crews")
+
 
 class Credit(models.Model):
     DIRECTOR = ("director", "감독")
@@ -47,7 +47,7 @@ class Credit(models.Model):
     job = models.CharField(max_length=8, choices=JOB_CHOICES)
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="credits")
     person = models.ForeignKey(
-        Person, on_delete=models.CASCADE, related_name="filmography"
+        Person, on_delete=models.CASCADE, related_name="credits_history"
     )
 
     # for actors
