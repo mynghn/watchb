@@ -107,7 +107,6 @@ class RequiredTogetherMixin:
         required_together_fields: Iterable[str]
 
     def validate(self, attrs: dict[str, Any]):
-        # API id check
         if all(attrs.get(f) in (None, "") for f in self.Meta.required_together_fields):
             raise ValidationError(
                 {
