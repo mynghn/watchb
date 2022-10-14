@@ -76,17 +76,17 @@ class UserViewSet(
         else:
             return super().get_permissions()
 
-    @action(detail=True, methods=["POST", "DELETE"])
+    @action(detail=True, methods=["PUT", "DELETE"])
     def avatar(self, request: Request, *args, **kwargs) -> Response:
-        if self.request.method == "POST":
+        if self.request.method == "PUT":
             return self.update(request, *args, **kwargs)
         elif self.request.method == "DELETE":
             self.get_object().avatar.delete()
             return Response(status=HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=["POST", "DELETE"])
+    @action(detail=True, methods=["PUT", "DELETE"])
     def background(self, request: Request, *args, **kwargs) -> Response:
-        if self.request.method == "POST":
+        if self.request.method == "PUT":
             return self.update(request, *args, **kwargs)
         elif self.request.method == "DELETE":
             self.get_object().background.delete()
