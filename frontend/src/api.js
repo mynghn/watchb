@@ -131,7 +131,7 @@ export const updateAvatar = (formData) => {
   } = store.getState();
   const uri = `${USERS_URI}${userId}/avatar/`;
 
-  return axios.post(uri, formData).then(onUpdateUserSuccessFactory(["avatar"]));
+  return axios.put(uri, formData).then(onUpdateUserSuccessFactory(["avatar"]));
 };
 
 export const updateBackground = (formData) => {
@@ -143,7 +143,7 @@ export const updateBackground = (formData) => {
   const uri = `${USERS_URI}${userId}/background/`;
 
   return axios
-    .post(uri, formData)
+    .put(uri, formData)
     .then(onUpdateUserSuccessFactory(["background"]));
 };
 
